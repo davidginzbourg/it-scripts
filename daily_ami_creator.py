@@ -41,15 +41,25 @@ def get_client(aws_access_key_id, aws_secret_access_key):
     return session.client('ec2')
 
 
-def is_ami_expired(ami_name, expiration):
+def is_ami_expired(ami_name, ami_prefix, expiration):
     """Check if the AMI has expired
 
     :param ami_name: The AMI name
+    :param ami_prefix: The AMI prefix
     :param expiration: Expiration time in seconds
     :return: True if expired, False
     """
 
-    pass
+    creation_time = int(ami_name.strip(ami_prefix))
+
+    current_time = int(time.time())
+
+    time_diff = current_time - creation_time
+
+    if time_diff > expiration:
+        return True
+
+    return False
 
 
 def gen_ami_name(ami_name_prefix):
