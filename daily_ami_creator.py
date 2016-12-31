@@ -132,5 +132,3 @@ def main():
     old_ami_ids = deregister_old_amis(client, ami_name_prefix, expiration)
 
     delete_old_snapshots(client, old_ami_ids)
-
-# create_ami('i-d689e86b', 'david_test_1', 'default')
