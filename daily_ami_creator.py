@@ -62,12 +62,15 @@ def gen_ami_name(ami_name_prefix):
 
     return ami_name_prefix + str(timestamp)
 
-def delete_old_snapshots(ami_ids):
+
+def delete_old_snapshots(client, ami_ids):
     """Deletes old snapshots given an ami id
 
+    :param client: AWS client
     :param ami_id: AMI IDs list
     """
     pass
+
 
 def daily_run():
     """Script to be run daily
