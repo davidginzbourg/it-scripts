@@ -26,13 +26,15 @@ def deregister_old_amis(client, ami_prefix, expiration):
     return old_amis_id
 
 
-def get_client(profile_name):
+def get_client(aws_access_key_id, aws_secret_access_key):
     """Creates an AWS boto3 client
 
-    :param expiration: Number of days allowed to elapse after the last ami
-    creation
+    :param aws_access_key_id: AWS Key ID
+    :param aws_secret_access_key: AWS Secret Access Key
     """
-    session = boto3.Session(profile_name=profile_name)
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key)
     return session.client('ec2')
 
 
