@@ -70,17 +70,21 @@ def daily_run():
     # Expiration time in seconds
     expiration = os.environ.get('EXPIRATION')
     ami_name = os.environ.get('AMI_NAME')
+    instance_id = os.environ.get('INSTANCE_ID')
 
     aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
     aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
     client = get_client(aws_access_key_id, aws_secret_access_key)
+
+    generated_ami_name = gen_ami_name(ami_name)
+
+    # Register AMI
+    client.create_image(
+        InstanceId=instance_id,
+        Name=generated_ami_name,
+        NoReboot=True)
     
 
 
-
-# client.create_image(
-#     InstanceId=instance_id,
-#     Name=ami_name,
-#     NoReboot=True)
 # create_ami('i-d689e86b', 'david_test_1', 'default')
