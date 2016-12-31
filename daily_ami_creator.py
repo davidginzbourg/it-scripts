@@ -1,4 +1,5 @@
 import os
+import time
 
 import boto3
 
@@ -49,6 +50,17 @@ def is_ami_expired(ami_name, expiration):
     """
 
     pass
+
+
+def gen_ami_name(ami_name):
+    """Generates AMI name
+
+    :param ami_name: The AMI name, used as a prefix
+    :return: Generated AMI name
+    """
+    timestamp = int(time.time())
+
+    return ami_name + str(timestamp)
 
 
 def daily_run():
