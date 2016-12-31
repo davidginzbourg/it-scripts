@@ -117,7 +117,5 @@ def daily_run():
     old_ami_ids = deregister_old_amis(client, ami_name_prefix, expiration)
 
     delete_old_snapshots(old_ami_ids)
-    
-
 
 # create_ami('i-d689e86b', 'david_test_1', 'default')
