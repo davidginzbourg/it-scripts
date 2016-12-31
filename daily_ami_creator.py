@@ -79,7 +79,12 @@ def delete_old_snapshots(client, ami_ids):
     :param client: AWS client
     :param ami_id: AMI IDs list
     """
-    pass
+
+    snapshots = client.describe_snapshots()
+    snapshot_ids = get_snapshots_ids(ami_ids, snapshots)
+
+    for snapshot_id in snapshot_ids:
+        client.delete_snapshot(SnapshotId=snapshot_id)
 
 
 def get_snapshots_ids(ami_ids, snapshots):
