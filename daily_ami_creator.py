@@ -72,6 +72,25 @@ def delete_old_snapshots(client, ami_ids):
     pass
 
 
+def get_snapshots_ids(ami_ids, snapshots):
+    """Gets the snapshot IDs using the AMI ID in the description
+
+    :param snapshots: List of snapshots
+    :param ami_ids: List of AMI IDs to search
+    """
+
+    snapshot_ids = []
+
+    for snapshot in snapshots['Snapshots']:
+        for ami in ami_ids:
+            if ami in snapshot['Description']:
+                snapshot_ids.append(snapshot['SnapshotId'])
+                # No need to append a second time
+                break
+
+    return snapshot_ids
+
+
 def daily_run():
     """Script to be run daily
     """
