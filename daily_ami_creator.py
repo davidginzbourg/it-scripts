@@ -54,6 +54,9 @@ def is_ami_expired(ami_name, expiration):
 def daily_run():
     """Script to be run daily
     """
+    aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+    aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    cliet = get_client(aws_access_key_id, aws_secret_access_key)
 
 # client.create_image(
 #     InstanceId=instance_id,
