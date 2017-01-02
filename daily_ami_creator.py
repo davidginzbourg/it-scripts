@@ -141,4 +141,6 @@ def main(event, context):
     # Delete old AMIs
     old_ami_ids = deregister_old_amis(client, ami_name_prefix, expiration)
 
+    logger.debug('Deleting old snapshots: {0}'.format(old_ami_ids))
+
     delete_old_snapshots(client, old_ami_ids)
