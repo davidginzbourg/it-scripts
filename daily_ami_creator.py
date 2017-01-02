@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 
 import boto3
 
@@ -109,12 +110,19 @@ def get_snapshots_ids(ami_ids, snapshots):
 def main(event, context):
     """Script to be run daily
     """
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
     # Expiration time in seconds
     expiration = os.environ.get('EXPIRATION')
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_id = os.environ.get('INSTANCE_ID')
 
+    logger.info('Init values: expiration: {0}, ami_name_prefix: {1}, '
+                'instance_id: {2}'.format(
+        expiration,
+        ami_name_prefix,
+        instance_id))
     # aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
     # aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     #
@@ -124,6 +132,7 @@ def main(event, context):
 
     generated_ami_name = gen_ami_name(ami_name_prefix)
 
+    logger.info('Generated ami name prefix: ' + generated_ami_name)
     # Register AMI
     client.create_image(
         InstanceId=instance_id,
