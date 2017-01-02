@@ -106,7 +106,7 @@ def get_snapshots_ids(ami_ids, snapshots):
     return snapshot_ids
 
 
-def main():
+def main(event, context):
     """Script to be run daily
     """
 
