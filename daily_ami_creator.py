@@ -5,6 +5,18 @@ import logging
 import boto3
 
 
+def get_client(aws_access_key_id, aws_secret_access_key):
+    """Creates an AWS boto3 client
+
+    :param aws_access_key_id: AWS Key ID
+    :param aws_secret_access_key: AWS Secret Access Key
+    """
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key)
+    return session.client('ec2')
+
+
 def deregister_old_amis(client, ami_prefix, expiration):
     """Deregisters old amis that are older than the given expiration days.
 
@@ -105,12 +117,16 @@ def main(event, context):
     expiration = os.environ.get('EXPIRATION')
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_id = os.environ.get('INSTANCE_ID')
+    aws_access_key_id = os.environ.get('IAM_ACCESS_KEY_ID')
+    aws_secret_access_key = os.environ.get('IAM_ACCESS_SECRET_KEY')
+
+    client = get_client(aws_access_key_id, aws_secret_access_key)
 
     logger.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
         'instance_id: {2}'.format(expiration, ami_name_prefix, instance_id))
 
-    client = boto3.client('ec2')
+    # client = boto3.client('ec2')
 
     generated_ami_name = gen_ami_name(ami_name_prefix)
 
