@@ -30,18 +30,6 @@ def deregister_old_amis(client, ami_prefix, expiration):
     return old_amis_ids
 
 
-# def get_client(aws_access_key_id, aws_secret_access_key):
-#     """Creates an AWS boto3 client
-#
-#     :param aws_access_key_id: AWS Key ID
-#     :param aws_secret_access_key: AWS Secret Access Key
-#     """
-#     session = boto3.Session(
-#         aws_access_key_id=aws_access_key_id,
-#         aws_secret_access_key=aws_secret_access_key)
-#     return session.client('ec2')
-
-
 def is_ami_expired(ami_name, ami_prefix, expiration):
     """Check if the AMI has expired
 
@@ -121,10 +109,6 @@ def main(event, context):
     logger.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
         'instance_id: {2}'.format(expiration, ami_name_prefix, instance_id))
-    # aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
-    # aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    #
-    # client = get_client(aws_access_key_id, aws_secret_access_key)
 
     client = boto3.client('ec2')
 
