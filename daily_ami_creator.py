@@ -29,16 +29,16 @@ def deregister_old_amis(client, ami_prefix, expiration):
     return old_amis_ids
 
 
-def get_client(aws_access_key_id, aws_secret_access_key):
-    """Creates an AWS boto3 client
-
-    :param aws_access_key_id: AWS Key ID
-    :param aws_secret_access_key: AWS Secret Access Key
-    """
-    session = boto3.Session(
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key)
-    return session.client('ec2')
+# def get_client(aws_access_key_id, aws_secret_access_key):
+#     """Creates an AWS boto3 client
+#
+#     :param aws_access_key_id: AWS Key ID
+#     :param aws_secret_access_key: AWS Secret Access Key
+#     """
+#     session = boto3.Session(
+#         aws_access_key_id=aws_access_key_id,
+#         aws_secret_access_key=aws_secret_access_key)
+#     return session.client('ec2')
 
 
 def is_ami_expired(ami_name, ami_prefix, expiration):
@@ -115,10 +115,12 @@ def main(event, context):
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_id = os.environ.get('INSTANCE_ID')
 
-    aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
-    aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    # aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+    # aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    #
+    # client = get_client(aws_access_key_id, aws_secret_access_key)
 
-    client = get_client(aws_access_key_id, aws_secret_access_key)
+    client = boto3.client('ec2')
 
     generated_ami_name = gen_ami_name(ami_name_prefix)
 
