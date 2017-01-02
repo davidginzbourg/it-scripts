@@ -143,7 +143,3 @@ def main(event, context):
     old_ami_ids = deregister_old_amis(client, ami_name_prefix, expiration)
 
     delete_old_snapshots(client, old_ami_ids)
-
-
-if __name__ == '__main__':
-    main()
