@@ -1,4 +1,5 @@
 import os
+import ast
 import time
 import logging
 
@@ -17,7 +18,7 @@ import boto3
 #     return session.client('ec2')
 
 
-def deregister_old_amis(client, ami_prefix, expiration):
+def deregister_old_amis(client, ami_prefix, expiration, owners):
     """Deregisters old amis that are older than the given expiration days.
 
     :param client: AWS client
@@ -25,12 +26,13 @@ def deregister_old_amis(client, ami_prefix, expiration):
     which in the creation time (in unix time) appears. I.e.
     '<ami_prefix><unix_time>'
     :param expiration: Expiration time in seconds
+    :param owners: List of owners IDs to filter
     :return: Old amis imade IDs
     """
 
     old_amis_ids = []
 
-    ami_list = client.describe_images()
+    ami_list = client.describe_images(Owners=owners)
 
     for ami in ami_list['Images']:
         if is_ami_expired(ami_prefix, ami['ImageId'], expiration):
@@ -113,6 +115,8 @@ def main(event, context):
     expiration = os.environ.get('EXPIRATION')
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_id = os.environ.get('INSTANCE_ID')
+    owner_ids_str = os.environ.get('OWNER_IDS')
+    owner_ids = ast.literal_eval(owner_ids_str)
 
     logging.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
@@ -131,7 +135,11 @@ def main(event, context):
         NoReboot=True)
 
     # Delete old AMIs
-    old_ami_ids = deregister_old_amis(client, ami_name_prefix, expiration)
+    old_ami_ids = deregister_old_amis(
+        client,
+        ami_name_prefix,
+        expiration,
+        owner_ids)
 
     logging.debug('Deleting old snapshots: {0}'.format(old_ami_ids))
 
