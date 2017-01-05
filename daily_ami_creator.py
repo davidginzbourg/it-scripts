@@ -110,8 +110,7 @@ def get_snapshots_ids(ami_ids, snapshots):
 def main(event, context):
     """Script to be run daily
     """
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logging.setLevel(logging.DEBUG)
 
     # Expiration time in seconds
     expiration = os.environ.get('EXPIRATION')
@@ -122,7 +121,7 @@ def main(event, context):
 
     client = get_client(aws_access_key_id, aws_secret_access_key)
 
-    logger.debug(
+    logging.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
         'instance_id: {2}'.format(expiration, ami_name_prefix, instance_id))
 
@@ -130,7 +129,7 @@ def main(event, context):
 
     generated_ami_name = gen_ami_name(ami_name_prefix)
 
-    logger.debug('Generated ami name prefix: ' + generated_ami_name)
+    logging.debug('Generated ami name prefix: ' + generated_ami_name)
 
     # Register AMI
     client.create_image(
@@ -141,6 +140,6 @@ def main(event, context):
     # Delete old AMIs
     old_ami_ids = deregister_old_amis(client, ami_name_prefix, expiration)
 
-    logger.debug('Deleting old snapshots: {0}'.format(old_ami_ids))
+    logging.debug('Deleting old snapshots: {0}'.format(old_ami_ids))
 
     delete_old_snapshots(client, old_ami_ids)
