@@ -30,9 +30,7 @@ def deregister_old_amis(client, ami_prefix, expiration):
 
     old_amis_ids = []
 
-    ami_list = client.describe_images(
-        ImageIds=[ami_prefix + '*']
-    )
+    ami_list = client.describe_images()
 
     for ami in ami_list['Images']:
         if is_ami_expired(ami_prefix, ami['ImageId'], expiration):
