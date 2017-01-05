@@ -110,7 +110,6 @@ def get_snapshots_ids(ami_ids, snapshots):
 def main(event, context):
     """Script to be run daily
     """
-    logging.setLevel(logging.DEBUG)
 
     # Expiration time in seconds
     expiration = os.environ.get('EXPIRATION')
