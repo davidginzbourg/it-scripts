@@ -103,25 +103,28 @@ def main(event, context):
     # Expiration time in seconds
     expiration = os.environ.get('EXPIRATION')
     ami_name_prefix = os.environ.get('AMI_PREFIX')
-    instance_id = os.environ.get('INSTANCE_ID')
+    instance_id_str = os.environ.get('INSTANCE_IDS')
+    instance_ids = ast.literal_eval(instance_id_str)
+
     owner_ids_str = os.environ.get('OWNER_IDS')
     owner_ids = ast.literal_eval(owner_ids_str)
 
     logging.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
-        'instance_id: {2}'.format(expiration, ami_name_prefix, instance_id))
+        'instance_ids: {2}'.format(expiration, ami_name_prefix, instance_ids))
 
     client = boto3.client('ec2')
 
-    generated_ami_name = gen_ami_name(ami_name_prefix)
+    for instance_id in instance_ids:
+        generated_ami_name = gen_ami_name(ami_name_prefix)
 
-    logging.debug('Generated ami name prefix: ' + generated_ami_name)
+        logging.debug('Generated ami name prefix: ' + generated_ami_name)
 
-    # Register AMI
-    client.create_image(
-        InstanceId=instance_id,
-        Name=generated_ami_name,
-        NoReboot=True)
+        # Register AMI
+        client.create_image(
+            InstanceId=instance_id,
+            Name=generated_ami_name,
+            NoReboot=True)
 
     # Delete old AMIs
     old_ami_ids = deregister_old_amis(
