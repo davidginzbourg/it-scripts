@@ -116,16 +116,12 @@ def main(event, context):
     expiration = os.environ.get('EXPIRATION')
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_id = os.environ.get('INSTANCE_ID')
-    aws_access_key_id = os.environ.get('IAM_ACCESS_KEY_ID')
-    aws_secret_access_key = os.environ.get('IAM_ACCESS_SECRET_KEY')
-
-    client = get_client(aws_access_key_id, aws_secret_access_key)
 
     logging.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
         'instance_id: {2}'.format(expiration, ami_name_prefix, instance_id))
 
-    # client = boto3.client('ec2')
+    client = boto3.client('ec2')
 
     generated_ami_name = gen_ami_name(ami_name_prefix)
 
