@@ -26,7 +26,7 @@ def deregister_old_amis(client, ami_prefix, expiration, owners):
         if ami_prefix in ami['Name']:
             if is_ami_expired(ami['Name'], ami_prefix, expiration):
                 old_amis_ids.append(ami['ImageId'])
-                client.deregister_image(ImageId=old_amis_ids)
+                client.deregister_image(ImageId=ami['ImageId'])
 
     return old_amis_ids
 
