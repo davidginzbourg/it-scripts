@@ -97,18 +97,63 @@ def get_snapshots_ids(ami_ids, snapshots):
     return snapshot_ids
 
 
+def get_owner_ids():
+    """Gets the owner IDs from the environmental variables.
+
+    :return: List of owner IDs
+    """
+    owner_ids = []
+    cur_owner = 'temp'
+
+    i = 0
+    while cur_owner:
+        cur_owner = os.environ.get('OWNER_ID' + str(i))
+        owner_ids.append(cur_owner)
+        i += 1
+
+    return owner_ids
+
+
+def get_instance_ids():
+    """Gets the instance IDs from the environmental variables.
+
+    :return: List of instance IDs
+    """
+    instance_ids = []
+    cur_instance = 'temp'
+
+    i = 0
+    while cur_instance:
+        cur_instance = os.environ.get('INSTANCE_ID' + str(i))
+        instance_ids.append(cur_instance)
+        i += 1
+
+    return instance_ids
+
+
 def main(event, context):
     """Script to be run daily
+
+    Owner IDs should be set as follows:
+        OWNER_ID0 = ...
+        OWNER_ID1 = ...
+        .
+        .
+        .
+
+    Instance IDs should be set as follows:
+        INSTANCE_ID0 = ...
+        INSTANCE_ID1 = ...
+        .
+        .
+        .
     """
 
     # Expiration time in seconds
     expiration = int(os.environ.get('EXPIRATION'))
     ami_name_prefix = os.environ.get('AMI_PREFIX')
-    instance_id_str = os.environ.get('INSTANCE_IDS')
-    instance_ids = ast.literal_eval(instance_id_str)
-
-    owner_ids_str = os.environ.get('OWNER_IDS')
-    owner_ids = ast.literal_eval(owner_ids_str)
+    instance_ids = get_instance_ids()
+    owner_ids = get_owner_ids()
 
     logging.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
