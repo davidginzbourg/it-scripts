@@ -6,6 +6,8 @@ import boto3
 
 # Counts ami name generation
 gen_ami_name_iteration = 0
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def deregister_old_amis(client, ami_prefix, expiration, owners):
@@ -169,9 +171,6 @@ def main(event, context):
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_ids = get_instance_ids()
     owner_ids = get_owner_ids()
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     logger.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
