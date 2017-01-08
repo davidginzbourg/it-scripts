@@ -136,4 +136,4 @@ def main(event, context):
 
     logging.info('Deleting old snapshots: {0}'.format(old_ami_ids))
 
-    delete_old_snapshots(client, old_ami_ids)
+    delete_old_snapshots(client, old_ami_ids, owner_ids)
