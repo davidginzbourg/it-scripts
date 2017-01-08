@@ -110,12 +110,16 @@ def get_owner_ids():
     :return: List of owner IDs
     """
     owner_ids = []
-    cur_owner = 'temp'
 
     i = 0
-    while cur_owner:
+    while True:
         cur_owner = os.environ.get('OWNER_ID' + str(i))
-        owner_ids.append(cur_owner)
+
+        if cur_owner is not None:
+            owner_ids.append(cur_owner)
+        else:
+            break
+
         i += 1
 
     return owner_ids
@@ -127,12 +131,16 @@ def get_instance_ids():
     :return: List of instance IDs
     """
     instance_ids = []
-    cur_instance = 'temp'
 
     i = 0
-    while cur_instance:
+    while True:
         cur_instance = os.environ.get('INSTANCE_ID' + str(i))
-        instance_ids.append(cur_instance)
+
+        if cur_instance is not None:
+            instance_ids.append(cur_instance)
+        else:
+            break
+
         i += 1
 
     return instance_ids
