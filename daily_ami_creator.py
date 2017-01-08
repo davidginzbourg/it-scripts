@@ -170,7 +170,10 @@ def main(event, context):
     instance_ids = get_instance_ids()
     owner_ids = get_owner_ids()
 
-    logging.debug(
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    logger.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
         'instance_ids: {2}'.format(expiration, ami_name_prefix, instance_ids))
 
@@ -179,7 +182,7 @@ def main(event, context):
     for instance_id in instance_ids:
         generated_ami_name = gen_ami_name(ami_name_prefix)
 
-        logging.info('Generated ami name prefix: ' + generated_ami_name)
+        logger.info('Generated ami name prefix: ' + generated_ami_name)
 
         # Register AMI
         client.create_image(
@@ -194,6 +197,6 @@ def main(event, context):
         expiration,
         owner_ids)
 
-    logging.info('Deleting old snapshots: {0}'.format(old_ami_ids))
+    logger.info('Deleting old snapshots: {0}'.format(old_ami_ids))
 
     delete_old_snapshots(client, old_ami_ids, owner_ids)
