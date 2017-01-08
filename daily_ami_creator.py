@@ -68,7 +68,7 @@ def delete_old_snapshots(client, ami_ids, owners):
 
     :param client: AWS client
     :param ami_id: AMI IDs list
-    :param owners: Snapshot owners
+    :param owners: Snapshot owners IDs
     """
 
     snapshots = client.describe_snapshots(OwnerIds=owners)
