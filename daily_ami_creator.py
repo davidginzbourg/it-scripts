@@ -1,9 +1,11 @@
 import os
-import ast
 import time
 import logging
 
 import boto3
+
+# Counts ami name generation
+gen_ami_name_iteration = 0
 
 
 def deregister_old_amis(client, ami_prefix, expiration, owners):
@@ -58,7 +60,12 @@ def gen_ami_name(ami_name_prefix):
     :param ami_name_prefix: The AMI name, used as a prefix
     :return: Generated AMI name
     """
-    timestamp = int(time.time())
+    timestamp = \
+        float(time.time()) \
+        + float('0.{0}'.format(gen_ami_name_iteration))
+
+    global gen_ami_name_iteration
+    gen_ami_name_iteration += 1
 
     return ami_name_prefix + str(timestamp)
 
