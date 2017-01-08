@@ -63,14 +63,15 @@ def gen_ami_name(ami_name_prefix):
     return ami_name_prefix + str(timestamp)
 
 
-def delete_old_snapshots(client, ami_ids):
+def delete_old_snapshots(client, ami_ids, owners):
     """Deletes old snapshots given an ami id
 
     :param client: AWS client
     :param ami_id: AMI IDs list
+    :param owners: Snapshot owners
     """
 
-    snapshots = client.describe_snapshots()
+    snapshots = client.describe_snapshots(OwnerIds=owners)
     snapshot_ids = get_snapshots_ids(ami_ids, snapshots)
 
     for snapshot_id in snapshot_ids:
