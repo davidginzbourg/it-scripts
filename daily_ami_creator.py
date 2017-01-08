@@ -102,7 +102,7 @@ def main(event, context):
     """
 
     # Expiration time in seconds
-    expiration = os.environ.get('EXPIRATION')
+    expiration = int(os.environ.get('EXPIRATION'))
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_id_str = os.environ.get('INSTANCE_IDS')
     instance_ids = ast.literal_eval(instance_id_str)
