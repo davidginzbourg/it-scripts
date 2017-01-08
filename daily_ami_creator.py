@@ -83,6 +83,8 @@ def delete_old_snapshots(client, ami_ids, owners):
     snapshots = client.describe_snapshots(OwnerIds=owners)
     snapshot_ids = get_snapshots_ids(ami_ids, snapshots)
 
+    logger.info('Deleting old snapshots: {0}'.format(snapshot_ids))
+
     for snapshot_id in snapshot_ids:
         client.delete_snapshot(SnapshotId=snapshot_id)
 
@@ -195,7 +197,5 @@ def main(event, context):
         ami_name_prefix,
         expiration,
         owner_ids)
-
-    logger.info('Deleting old snapshots: {0}'.format(old_ami_ids))
 
     delete_old_snapshots(client, old_ami_ids, owner_ids)
