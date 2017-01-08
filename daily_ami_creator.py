@@ -42,7 +42,7 @@ def is_ami_expired(ami_name, ami_prefix, expiration):
     :return: True if expired, False
     """
 
-    creation_time = int(ami_name.strip(ami_prefix))
+    creation_time = float(ami_name.strip(ami_prefix))
 
     current_time = int(time.time())
 
