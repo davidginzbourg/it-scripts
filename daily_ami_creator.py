@@ -91,7 +91,7 @@ def get_snapshots_ids(ami_ids, snapshots):
         for ami in ami_ids:
             if ami in snapshot['Description']:
                 snapshot_ids.append(snapshot['SnapshotId'])
-                # No need to append a second time
+                # Skip to the next snapshot
                 break
 
     return snapshot_ids
