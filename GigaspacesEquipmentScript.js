@@ -41,7 +41,7 @@ function sendOldLaptopsReminderEmail() {
         var name = row[LAPTOP_EMPLOYEE_NAME];
         var model = row[LAPTOP_MODEL];
         var age = row[LAPTOP_AGE];
-        if (age >= LAPTOP_MAX_AGE && name != "SPARE LAPTOP") {
+        if (age >= LAPTOP_MAX_AGE && name.toUpperCase() != "SPARE LAPTOP") {
             htmlArray += "<tr>";
             htmlArray += "<td>";
             htmlArray += name;
@@ -67,6 +67,7 @@ function sendOldLaptopsReminderEmail() {
 
 
 function sendOrderReminderEmail() {
+    var has_new_data = false
     // 1st sheet (Orders List)
     var sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
     // First row of data to process
@@ -126,6 +127,8 @@ function sendOrderReminderEmail() {
         if (row[ORDER_ENTRY_DATE] != "") {
             if (order_status == "Ordered" &&
                 order_undelivered_days >= ORDER_MAX_UNDELIVERED_DAYS) {
+                has_new_data = true
+
                 undeliveredItemsHtmlArray += "<tr>";
 
                 undeliveredItemsHtmlArray += "<td>";
@@ -154,6 +157,8 @@ function sendOrderReminderEmail() {
 
                 undeliveredItemsHtmlArray += "</tr>";
             } else if (order_status == "Delivered") {
+                has_new_data = true
+
                 deliveredItemsHtmlArray += "<tr>";
 
                 deliveredItemsHtmlArray += "<td>";
@@ -179,6 +184,8 @@ function sendOrderReminderEmail() {
                 deliveredItemsHtmlArray += "</tr>";
             } else if (order_status == "Received"
                 && row[ORDER_DELIVERY_DATE] == "") {
+                has_new_data = true
+
                 noDeliveryDateHtmlArray += "<tr>";
 
                 noDeliveryDateHtmlArray += "<td>";
@@ -200,6 +207,8 @@ function sendOrderReminderEmail() {
                 noDeliveryDateHtmlArray += "</tr>";
             } else if (order_status != "Ordered"
                 && order_status != "Cancelled" && order_status != "Received") {
+                has_new_data = true
+
                 awaitingStatusChangeHtmlArray += "<tr>";
 
                 awaitingStatusChangeHtmlArray += "<td>";
@@ -233,13 +242,13 @@ function sendOrderReminderEmail() {
     }
 
     undeliveredItemsHtmlArray =
-        fillEmptyArray({htmlArray: undeliveredItemsHtmlArray});
+        fillIfEmpty({htmlArray: undeliveredItemsHtmlArray});
     deliveredItemsHtmlArray =
-        fillEmptyArray({htmlArray: deliveredItemsHtmlArray});
+        fillIfEmpty({htmlArray: deliveredItemsHtmlArray});
     noDeliveryDateHtmlArray =
-        fillEmptyArray({htmlArray: noDeliveryDateHtmlArray});
+        fillIfEmpty({htmlArray: noDeliveryDateHtmlArray});
     awaitingStatusChangeHtmlArray =
-        fillEmptyArray({htmlArray: awaitingStatusChangeHtmlArray});
+        fillIfEmpty({htmlArray: awaitingStatusChangeHtmlArray});
 
     undeliveredItemsHtmlArray += "</table>";
     deliveredItemsHtmlArray += "</table>";
@@ -248,21 +257,23 @@ function sendOrderReminderEmail() {
 
     var subject = "Daily order reminder email";
     var currentDate = new Date();
-    MailApp.sendEmail({
-        to: SEND_TO_EMAIL_ADDR,
-        subject: subject,
-        htmlBody: "<h2>Undelivered items:</h2>"
-        + "<p>" + undeliveredItemsHtmlArray + "</p>"
-        + "<h2>Delivered but employee hasn't received yet:</h2>"
-        + "<p>" + deliveredItemsHtmlArray + "</p>"
-        + "<h2>Awaiting for status change:</h2>"
-        + "<p>" + awaitingStatusChangeHtmlArray + "</p>"
-        + "<h2>No delivery date:</h2>"
-        + "<p>" + noDeliveryDateHtmlArray + "</p>"
-    });
+    if (has_new_data) {
+        MailApp.sendEmail({
+            to: SEND_TO_EMAIL_ADDR,
+            subject: subject,
+            htmlBody: "<h2>Undelivered items:</h2>"
+            + "<p>" + undeliveredItemsHtmlArray + "</p>"
+            + "<h2>Delivered but employee hasn't received yet:</h2>"
+            + "<p>" + deliveredItemsHtmlArray + "</p>"
+            + "<h2>Awaiting for status change:</h2>"
+            + "<p>" + awaitingStatusChangeHtmlArray + "</p>"
+            + "<h2>No delivery date:</h2>"
+            + "<p>" + noDeliveryDateHtmlArray + "</p>"
+        });
+    }
 }
 
-function fillEmptyArray(parameters) {
+function fillIfEmpty(parameters) {
     var htmlArray = parameters.htmlArray;
 
     if (htmlArray.indexOf("<tr>") == -1) {
