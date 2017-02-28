@@ -5,7 +5,7 @@ import logging
 import boto3
 
 # Counts ami name generation
-gen_ami_name_iteration = 0
+# gen_ami_name_iteration = 0
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -19,7 +19,7 @@ def deregister_old_amis(client, ami_prefix, expiration, owners):
     '<ami_prefix><unix_time>'
     :param expiration: Expiration time in seconds
     :param owners: List of owners IDs to filter
-    :return: Old amis imade IDs
+    :return: Old amis image IDs
     """
 
     old_amis_ids = []
@@ -56,20 +56,21 @@ def is_ami_expired(ami_name, ami_prefix, expiration):
     return False
 
 
-def gen_ami_name(ami_name_prefix):
+def gen_ami_name(ami_name_prefix, instance_id):
     """Generates AMI name
 
     :param ami_name_prefix: The AMI name, used as a prefix
+    :param instance_id: The instance ID to associate the AMI with
     :return: Generated AMI name
     """
-    timestamp = \
-        float(time.time()) \
-        + float('0.{0}'.format(gen_ami_name_iteration))
+    # timestamp = \
+    #     float(time.time()) \
+    #     + float('0.{0}'.format(gen_ami_name_iteration))
+    #
+    # global gen_ami_name_iteration
+    # gen_ami_name_iteration += 1
 
-    global gen_ami_name_iteration
-    gen_ami_name_iteration += 1
-
-    return ami_name_prefix + str(timestamp)
+    return ami_name_prefix + str(instance_id) + '-' + str(time.time())
 
 
 def delete_old_snapshots(client, ami_ids, owners):
@@ -173,6 +174,7 @@ def main(event, context):
     ami_name_prefix = os.environ.get('AMI_PREFIX')
     instance_ids = get_instance_ids()
     owner_ids = get_owner_ids()
+    old_ami_ids = []
 
     logger.debug(
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
@@ -181,7 +183,7 @@ def main(event, context):
     client = boto3.client('ec2')
 
     for instance_id in instance_ids:
-        generated_ami_name = gen_ami_name(ami_name_prefix)
+        generated_ami_name = gen_ami_name(ami_name_prefix, instance_id)
 
         logger.info('Generated ami name prefix: ' + generated_ami_name)
 
@@ -191,11 +193,11 @@ def main(event, context):
             Name=generated_ami_name,
             NoReboot=True)
 
-    # Delete old AMIs
-    old_ami_ids = deregister_old_amis(
-        client,
-        ami_name_prefix,
-        expiration,
-        owner_ids)
+        # Delete old AMIs
+        old_ami_ids.extend(deregister_old_amis(
+            client,
+            ami_name_prefix + instance_id + '-',
+            expiration,
+            owner_ids))
 
     delete_old_snapshots(client, old_ami_ids, owner_ids)
