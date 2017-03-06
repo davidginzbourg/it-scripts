@@ -44,7 +44,7 @@ def is_ami_expired(ami_name, ami_prefix, expiration):
     :return: True if expired, False
     """
 
-    creation_time = float(ami_name.strip(ami_prefix))
+    creation_time = float(ami_name[len(ami_prefix):])
 
     current_time = int(time.time())
 
@@ -63,13 +63,6 @@ def gen_ami_name(ami_name_prefix, instance_id):
     :param instance_id: The instance ID to associate the AMI with
     :return: Generated AMI name
     """
-    # timestamp = \
-    #     float(time.time()) \
-    #     + float('0.{0}'.format(gen_ami_name_iteration))
-    #
-    # global gen_ami_name_iteration
-    # gen_ami_name_iteration += 1
-
     return ami_name_prefix + str(instance_id) + '-' + str(time.time())
 
 
