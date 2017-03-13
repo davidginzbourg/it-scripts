@@ -33,27 +33,36 @@ function sendOldLaptopsReminderEmail() {
     var dataRange = sheet.getRange(startRow, 1, numRows, LAPTOP_LIST_COLUMNS);
     // Fetch values table
     var data = dataRange.getValues();
-    var htmlArray = "<table border='0'>";
-    htmlArray += "<tr><th  align='left'>Name</th>" +
-        "<th align='left'>Age</th></tr>";
+    var oldLaptops = [];
+
     for (i in data) {
         var row = data[i];
         var name = row[LAPTOP_EMPLOYEE_NAME];
         var model = row[LAPTOP_MODEL];
         var age = row[LAPTOP_AGE];
-        if (age >= LAPTOP_MAX_AGE && name.toUpperCase() != "SPARE LAPTOP") {
-            htmlArray += "<tr>";
-            htmlArray += "<td>";
-            htmlArray += name;
-            htmlArray += "</td>";
-            htmlArray += "<td>";
-            htmlArray += parseInt(age) + "y " + (age % 1).toFixed(2) * 10
-                + "m";
-            htmlArray += "</td>";
-            htmlArray += "</tr>";
+        if (i != null
+            && age >= LAPTOP_MAX_AGE
+            && name.toUpperCase().indexOf("SPARE LAPTOP") == -1) {
+            oldLaptops.push([name, age, model, parseInt(i) + 2])
         }
     }
-    htmlArray += "</table>";
+
+    // Sort by age
+    oldLaptops.sort(function (a, b) {
+        // var name = 0;
+        var age = 1;
+        // var model = 2;
+        // var row = 3;
+
+        var keyA = parseFloat(a[age]),
+            keyB = parseFloat(b[age]);
+        // Compare the 2 items
+        if (keyA < keyB) return -1;
+        if (keyA > keyB) return 1;
+        return 0;
+    });
+
+    var htmlArray = getLaptopHtmlArray(oldLaptops);
     var subject = "Monthly laptop replacement script mail ";
     var currentDate = new Date();
     subject += "| month number " + (currentDate.getMonth() + 1);
@@ -65,6 +74,48 @@ function sendOldLaptopsReminderEmail() {
     });
 }
 
+function getLaptopHtmlArray(data) {
+    var htmlArray = "<table border='0'>";
+    htmlArray += "<tr>" +
+        "<th  align='left'>Name</th>" +
+        "<th align='left'>Age</th>" +
+        "<th align='left'>Model</th>" +
+        "<th align='left'>Row</th>" +
+        "</tr>";
+
+    var name = 0;
+    var age = 1;
+    var model = 2;
+    var row = 3;
+
+    for (var i = 0; i < data.length; i++) {
+        htmlArray += "<tr>";
+
+        htmlArray += "<td>";
+        htmlArray += data[i][name];
+        htmlArray += "</td>";
+
+        htmlArray += "<td>";
+        htmlArray += parseInt(data[i][age]) + "y "
+            + (data[i][age] % 1).toFixed(2) * 10
+            + "m";
+        htmlArray += "</td>";
+
+        htmlArray += "<td>";
+        htmlArray += data[i][model];
+        htmlArray += "</td>";
+
+        htmlArray += "<td>";
+        htmlArray += data[i][row];
+        htmlArray += "</td>";
+
+        htmlArray += "</tr>";
+    }
+
+    htmlArray += "</table>";
+
+    return htmlArray
+}
 
 function sendOrderReminderEmail() {
     var has_new_data = false
