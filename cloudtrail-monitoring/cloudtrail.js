@@ -17,7 +17,7 @@ var FILTER_CONFIG_FILE = '********';
 //
 var FILTER_CONFIG = '';
 
-console.log('Loading Lambda function');
+console.info('Loading Lambda function');
 
 // initialize libraries and global values
 var aws = require('aws-sdk');
@@ -32,7 +32,7 @@ function init() {
         var params = {Bucket: FILTER_CONFIG_BUCKET, Key: FILTER_CONFIG_FILE};
         var body = s3.getObject(params).createReadStream().on('data', function (data) {
             FILTER_CONFIG = JSON.parse(data);
-            console.log('Config : %j', FILTER_CONFIG);
+            console.info('Config : %j', FILTER_CONFIG);
             deferred.resolve(FILTER_CONFIG);
         });
     }
@@ -60,15 +60,15 @@ function sendNotification(msg, topicARN, endPointARN) {
         };
     }
 
-    console.log(params);
+    console.info(params);
 
     var deferred = Q.defer();
     sns.publish(params, function (err, data) {
         if (err) {
-            console.log(err, err.stack); // an error occurred
+            console.info(err, err.stack); // an error occurred
             deferred.reject(err);
         } else {
-            console.log(data);           // successful response
+            console.info(data);           // successful response
             deferred.resolve(data);
         }
     });
@@ -80,7 +80,7 @@ function download(bucket, key) {
 
     // extract file name from key name
     var fileName = key.match(/.*\/(.*).json.gz$/)[1]
-    console.log("RegExp file name = " + fileName);
+    console.info("RegExp file name = " + fileName);
     var file = fs.createWriteStream('/tmp/' + fileName + '.json.gz');
 
     // pipe from S3 to local file
@@ -91,12 +91,12 @@ function download(bucket, key) {
 
     var deferred = Q.defer();
     stream.on('error', function (error) {
-        console.log(error);
+        console.info(error);
         deferred.reject(error);
     });
 
     stream.on('end', function () {
-        console.log('End of read stream');
+        console.info('End of read stream');
         deferred.resolve(file);
     });
     return deferred.promise;
@@ -114,24 +114,24 @@ function extract(file) {
     var inp = fs.createReadStream(file.path);
     var out = fs.createWriteStream(jsFileName);
 
-    console.log("Going to extract \n" + file.path + "\nto\n" + jsFileName);
+    console.info("Going to extract \n" + file.path + "\nto\n" + jsFileName);
     inp.pipe(unzip).pipe(out);
 
     var deferred = Q.defer();
     out.on('error', function (error) {
-        console.log(error);
+        console.info(error);
         deferred.reject(error);
     });
 
     out.on('close', function () {
-        console.log('End of write stream');
+        console.info('End of write stream');
         deferred.resolve(jsFileName);
     });
     return deferred.promise;
 }
 
 function filter(file) {
-    console.log("Going to filter\n" + file);
+    console.info("Going to filter\n" + file);
 
     // filter every single record from the log file
     // returns an array containing every single matching records
@@ -140,8 +140,8 @@ function filter(file) {
         return x.eventSource.match(new RegExp(FILTER_CONFIG.source));
     });
 
-    console.log("Filtered Records:");
-    console.log(records);
+    console.info("Filtered Records:");
+    console.info(records);
 
     var deferred = Q.defer();
     deferred.resolve(records);
@@ -156,7 +156,7 @@ function notify(records) {
     for (var i = 0; i < records.length; i++) {
         if (records[i].eventName.match(new RegExp(FILTER_CONFIG.regexp))) {
             // for each match, send an SNS notification
-            console.log('Sending notification #' + (i + 1));
+            console.info('Sending notification #' + (i + 1));
             var accountName = records[i].recipientAccountId;
 
             var message = "Event  : " + records[i].eventName + "\n" +
@@ -171,7 +171,7 @@ function notify(records) {
     }
 
     if (records.length > 0) {
-        console.log("Done sending notifications to " + FILTER_CONFIG.sns.topicARN);
+        console.info("Done sending notifications to " + FILTER_CONFIG.sns.topicARN);
     }
 
     return Q.all(deferredTasks);
@@ -181,8 +181,8 @@ exports.handler = function (event, context) {
 
     Q.allSettled(init()).then(function (result) {
 
-        console.log('Received event:');
-        console.log(JSON.stringify(event, null, '  '));
+        console.info('Received event:');
+        console.info(JSON.stringify(event, null, '  '));
 
         var bucket = event.Records[0].s3.bucket.name;
         var key = event.Records[0].s3.object.key;
@@ -200,7 +200,7 @@ exports.handler = function (event, context) {
                 );
             })
             .done(function () {
-                console.log(
+                console.info(
                     'Finished handling ' + bucket + '/' + key
                 );
                 context.done();
