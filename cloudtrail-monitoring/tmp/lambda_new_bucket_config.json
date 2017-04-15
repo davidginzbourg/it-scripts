@@ -1,8 +1,0 @@
-{
-   "source" : "s3.amazonaws.com",
-   "regexp" : "CreateBucket",
-   "sns" : {
-      "region" : "eu-west-1",
-"topicARN" : "arn:aws:sns:eu-west-1:779620655981:new_s3_bucket"
-   }
-}
