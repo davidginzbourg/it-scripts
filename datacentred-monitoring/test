@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .blue {
+            font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+            font-size: 12px;
+            /*width: 480px;*/
+            text-align: left;
+            border-collapse: collapse;
+            margin: 0 20px 20px 20px;
+        }
+
+        th.blue {
+            font-size: 14px;
+            font-weight: normal;
+            border-right: 1px solid #fff;
+            border-left: 1px solid #fff;
+            color: #039;
+            padding: 12px 15px;
+        }
+
+        td.blue {
+            border-right: 1px solid #fff;
+            border-left: 1px solid #fff;
+            color: #669;
+            padding: 8px 15px;
+        }
+
+    </style>
+</head>
+<body>
+<table class="blue">
+    <caption class="blue">Projects</caption>
+    <thead>
+    <tr class="blue">
+        <th class="blue" scope="col">Project</th>
+        <th class="blue" scope="col">Amount of instances</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+    </tbody>
+</table>
+<table class="blue">
+    <caption class="blue">Instances</caption>
+    <thead>
+    <tr class="blue">
+        <th class="blue" scope="col">Instance flavor</th>
+        <th class="blue" scope="col">Created time</th>
+        <th class="blue" scope="col">Project</th>
+    </tr>
+    </thead>
+    <tbody>
+    
+    </tbody>
+</table>
+</body>
+</html>

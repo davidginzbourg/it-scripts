@@ -15,11 +15,11 @@
           "key": "KEY_NAME.json.gz",
           "size": 2930
         },
-        
+
         "bucket": {
           "arn": "arn:aws:s3:::BUCKET_NAME",
           "name": "BUCKET_NAME",
-          
+
           "ownerIdentity": {
             "principalId": "***"
           }
