@@ -9,8 +9,8 @@
 //
 // Please change these value to adapt to your configuration
 //
-var FILTER_CONFIG_BUCKET = '******';
-var FILTER_CONFIG_FILE = '********';
+var FILTER_CONFIG_BUCKET = 'cloudify-production-event';
+var FILTER_CONFIG_FILE = 'lambda_new_bucket_config.json';
 
 //
 // Nothing to change beyond this point
