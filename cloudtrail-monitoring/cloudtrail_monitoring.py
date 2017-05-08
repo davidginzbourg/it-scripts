@@ -23,16 +23,15 @@ def get_config(s3client):
     :return: returns the dict representing the configuration file stored in S3,
     False if failed to retrieve it.
     """
-    config_file = None
     for i in range(RETRIES):
         try:
             config_file = s3client.get_object(
                 Bucket=FILTER_CONFIG_BUCKET,
                 Key=FILTER_CONFIG_FILE)['Body']
+            return json.load(config_file)
         except SSLError as e:
             sleep(0.1)
-    if config_file:
-        return json.load(config_file)
+
     return False
 
 
@@ -151,7 +150,7 @@ def main(event, context):
     notifications = {}
     for obj in events:
         if event_matches_config(config, obj):
-            notifications.update(get_notification(config, obj))
+            notifications.update(get_notification(obj))
 
     for notif_subject in notifications:
         notify(config, notif_subject, notifications[notif_subject])
