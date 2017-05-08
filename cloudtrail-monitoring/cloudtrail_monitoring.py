@@ -29,7 +29,7 @@ def get_config(s3client):
                 Bucket=FILTER_CONFIG_BUCKET,
                 Key=FILTER_CONFIG_FILE)['Body']
             return json.load(config_file)
-        except SSLError as e:
+        except SSLError:
             sleep(0.1)
 
     return False
