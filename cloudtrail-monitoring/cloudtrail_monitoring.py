@@ -45,27 +45,25 @@ def get_events(s3client, event):
     """
     obj_list = []
     for obj in event['Records']:
-        compressed_obj = s3client.get_object(
-            Bucket=FILTER_CONFIG_BUCKET,
-            Key=obj['s3']['object']['key'])['Body']
-        obj_list.extend(get_raw_events(compressed_obj))
+        obj_list.extend(get_raw_events(s3client,obj['s3']['object']['key']))
 
     return obj_list
 
 
-def get_raw_events(compressed_obj):
+def get_raw_events(s3client, key):
     """Returns a python object from a compressed file.
 
-    :param compressed_obj: a .gz compressed file
+    :param s3client: the boto3 client to be used
+    :param key: the key of the file to be downloaded
     :return: the raw python object underneath
     """
     raw_file = ''
     path = tempfile.mkstemp()[1]
-    with open(path, 'w') as f:
-        f.write(compressed_obj.read())
+    with open(path, 'wb') as tmp:
+        s3client.download_fileobj(FILTER_CONFIG_BUCKET, key, tmp)
 
-    with gzip.open(path, 'r') as f:
-        for line in f:
+    with gzip.open(path, 'r') as gz_file:
+        for line in gz_file:
             raw_file += line
     json_file = json.loads(raw_file)
     if 'Records' in json_file:
