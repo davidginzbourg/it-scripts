@@ -3,9 +3,6 @@ import json
 import gzip
 import logging
 import tempfile
-from time import sleep
-from _ssl import SSLError
-
 import boto3
 
 logger = logging.getLogger()
@@ -13,7 +10,6 @@ logger.setLevel(logging.INFO)
 
 FILTER_CONFIG_BUCKET = os.environ.get('FILTER_CONFIG_BUCKET')
 FILTER_CONFIG_FILE = os.environ.get('FILTER_CONFIG_FILE')
-RETRIES = 60
 
 
 def get_config(s3client):
@@ -23,16 +19,15 @@ def get_config(s3client):
     :return: returns the dict representing the configuration file stored in S3,
     False if failed to retrieve it.
     """
-    for i in range(RETRIES):
-        try:
-            config_file = s3client.get_object(
-                Bucket=FILTER_CONFIG_BUCKET,
-                Key=FILTER_CONFIG_FILE)['Body']
-            return json.load(config_file)
-        except SSLError:
-            sleep(0.1)
-
-    return False
+    raw_file = ''
+    path = tempfile.mkstemp()[1]
+    with open(path, 'wb') as tmp:
+        s3client.download_fileobj(
+            FILTER_CONFIG_BUCKET, FILTER_CONFIG_FILE, tmp)
+    with open(path, 'r') as f:
+        for line in f:
+            raw_file += line
+    return json.loads(raw_file)
 
 
 def get_events(s3client, event):
@@ -45,7 +40,7 @@ def get_events(s3client, event):
     """
     obj_list = []
     for obj in event['Records']:
-        obj_list.extend(get_raw_events(s3client,obj['s3']['object']['key']))
+        obj_list.extend(get_raw_events(s3client, obj['s3']['object']['key']))
 
     return obj_list
 
@@ -138,9 +133,6 @@ def main(event, context):
     logger.info('Handling event: {0}'.format(event))
     s3client = boto3.client('s3')
     config = get_config(s3client)
-    if not config:
-        logger.info('Failed to retrieve config')
-        return False
     logger.info('Fetched the following config: {0}'.format(config))
     events = get_events(s3client, event)
     logger.info('Checking {0} events'.format(len(events)))
