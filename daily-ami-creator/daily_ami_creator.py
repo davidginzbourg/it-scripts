@@ -1,22 +1,21 @@
 import os
 import time
 import logging
+import datetime
+import dateutil.parser
 
 import boto3
 
-# Counts ami name generation
-# gen_ami_name_iteration = 0
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+client = boto3.client('ec2')
 
 
 def deregister_old_amis(client, ami_prefix, expiration, owners):
     """Deregisters old amis that are older than the given expiration days.
 
     :param client: AWS client
-    :param ami_prefix: A prefix of the ami which represents the prefix after
-    which in the creation time (in unix time) appears. I.e.
-    '<ami_prefix><unix_time>'
+    :param ami_prefix: A prefix of the ami
     :param expiration: Expiration time in seconds
     :param owners: List of owners IDs to filter
     :return: Old amis image IDs
@@ -27,43 +26,26 @@ def deregister_old_amis(client, ami_prefix, expiration, owners):
     ami_list = client.describe_images(Owners=owners)
 
     for ami in ami_list['Images']:
-        if ami_prefix in ami['Name']:
-            if is_ami_expired(ami['Name'], ami_prefix, expiration):
-                old_amis_ids.append(ami['ImageId'])
-                client.deregister_image(ImageId=ami['ImageId'])
+        if ami['Name'].startswith(ami_prefix) \
+                and is_ami_expired(ami, expiration):
+            old_amis_ids.append(ami['ImageId'])
+            client.deregister_image(ImageId=ami['ImageId'])
 
     return old_amis_ids
 
 
-def is_ami_expired(ami_name, ami_prefix, expiration):
+def is_ami_expired(ami, expiration):
     """Check if the AMI has expired
 
-    :param ami_name: The AMI name
-    :param ami_prefix: The AMI prefix
+    :param ami: The AMI dict
     :param expiration: Expiration time in seconds
     :return: True if expired, False
     """
-
-    creation_time = float(ami_name[len(ami_prefix):])
-
-    current_time = int(time.time())
-
-    time_diff = current_time - creation_time
-
-    if time_diff > expiration:
-        return True
-
-    return False
-
-
-def gen_ami_name(ami_name_prefix, instance_id):
-    """Generates AMI name
-
-    :param ami_name_prefix: The AMI name, used as a prefix
-    :param instance_id: The instance ID to associate the AMI with
-    :return: Generated AMI name
-    """
-    return ami_name_prefix + str(instance_id) + '-' + str(time.time())
+    ami_creation_date = dateutil.parser.parse(ami['CreationDate']).replace(
+        tzinfo=None)
+    expiration_date = datetime.datetime.utcnow() - datetime.timedelta(
+        seconds=expiration)
+    return ami_creation_date - expiration_date <= datetime.timedelta(0)
 
 
 def delete_old_snapshots(client, ami_ids, owners):
@@ -173,24 +155,20 @@ def main(event, context):
         'Init values: expiration: {0}, ami_name_prefix: {1}, '
         'instance_ids: {2}'.format(expiration, ami_name_prefix, instance_ids))
 
-    client = boto3.client('ec2')
-
     for instance_id in instance_ids:
-        generated_ami_name = gen_ami_name(ami_name_prefix, instance_id)
+        ami_name = ami_name_prefix + str(time.strftime("%Y-%m-%d"))
 
-        logger.info('Generated ami name prefix: ' + generated_ami_name)
+        logger.info('Generated ami name prefix: ' + ami_name)
 
         # Register AMI
         client.create_image(
             InstanceId=instance_id,
-            Name=generated_ami_name,
+            Name=ami_name,
             NoReboot=True)
 
         # Delete old AMIs
-        old_ami_ids.extend(deregister_old_amis(
-            client,
-            ami_name_prefix + instance_id + '-',
-            expiration,
-            owner_ids))
+        old_ami_ids.extend(
+            deregister_old_amis(client, ami_name_prefix, expiration,
+                                owner_ids))
 
     delete_old_snapshots(client, old_ami_ids, owner_ids)
