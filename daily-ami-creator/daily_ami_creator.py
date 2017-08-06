@@ -126,6 +126,14 @@ def get_instance_ids():
     return instance_ids
 
 
+def get_ami_name(ami_name_prefix):
+    """Generates the AMI name
+
+    :param ami_name_prefix: an AMI name prefix
+    """
+    return ami_name_prefix + str(time.strftime("%Y-%m-%d"))
+
+
 def main(event, context):
     """Script to be run daily
 
@@ -156,7 +164,7 @@ def main(event, context):
         'instance_ids: {2}'.format(expiration, ami_name_prefix, instance_ids))
 
     for instance_id in instance_ids:
-        ami_name = ami_name_prefix + str(time.strftime("%Y-%m-%d"))
+        ami_name = get_ami_name(ami_name_prefix)
 
         logger.info('Generated ami name prefix: ' + ami_name)
 
