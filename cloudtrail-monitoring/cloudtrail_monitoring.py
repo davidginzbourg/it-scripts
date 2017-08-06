@@ -11,16 +11,18 @@ logger.setLevel(logging.INFO)
 FILTER_CONFIG_BUCKET = os.environ.get('FILTER_CONFIG_BUCKET')
 FILTER_CONFIG_FILE = os.environ.get('FILTER_CONFIG_FILE')
 
+s3client = boto3.client('s3')
 
-def get_config(s3client):
+
+def get_config():
     """Fetches the configuration file stored in S3.
 
-    :param s3client: the boto3 client to be used
     :return: returns the dict representing the configuration file stored in S3,
     False if failed to retrieve it.
     """
     raw_file = ''
-    path = tempfile.mkstemp()[1]
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
     with open(path, 'wb') as tmp:
         s3client.download_fileobj(
             FILTER_CONFIG_BUCKET, FILTER_CONFIG_FILE, tmp)
@@ -30,11 +32,10 @@ def get_config(s3client):
     return json.loads(raw_file)
 
 
-def get_events(s3client, event):
+def get_events(event):
     """Gets the objects that were put - the ones that caused this script to be
     invoked.
 
-    :param s3client: the boto3 client to be used
     :param event: the given AWS event
     :return: a list of dicts representing the objects
     """
@@ -53,7 +54,8 @@ def get_raw_events(s3client, key):
     :return: the raw python object underneath
     """
     raw_file = ''
-    path = tempfile.mkstemp()[1]
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
     with open(path, 'wb') as tmp:
         s3client.download_fileobj(FILTER_CONFIG_BUCKET, key, tmp)
 
@@ -103,12 +105,11 @@ def get_notification(matched_obj):
             ['bucketName'])
     message = \
         'New bucket created in account: {0}.\nBucket name: {1}\n' \
-        'The user that created it was: {2}'.format(
-            matched_obj['recipientAccountId'],
-            matched_obj['requestParameters']
-            ['bucketName'],
-            matched_obj['userIdentity']
-            ['userName'])
+        'ARN of the creator: {2}\n' \
+        'Region: {3}'.format(matched_obj['recipientAccountId'],
+                             matched_obj['requestParameters']['bucketName'],
+                             matched_obj['userIdentity']['arn'],
+                             matched_obj['awsRegion'])
 
     return {subject: message}
 
@@ -131,10 +132,9 @@ def notify(config, subject, message):
 
 def main(event, context):
     logger.info('Handling event: {0}'.format(event))
-    s3client = boto3.client('s3')
-    config = get_config(s3client)
+    config = get_config()
     logger.info('Fetched the following config: {0}'.format(config))
-    events = get_events(s3client, event)
+    events = get_events(event)
     logger.info('Checking {0} events'.format(len(events)))
 
     notifications = {}
@@ -142,7 +142,7 @@ def main(event, context):
         if event_matches_config(config, obj):
             notifications.update(get_notification(obj))
 
-    for notif_subject in notifications:
-        notify(config, notif_subject, notifications[notif_subject])
+    for notify_subject in notifications:
+        notify(config, notify_subject, notifications[notify_subject])
 
     return True
