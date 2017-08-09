@@ -1,15 +1,31 @@
 import os
 import json
 import gzip
+import boto3
 import logging
 import tempfile
-import boto3
+from datetime import datetime
+
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 FILTER_CONFIG_BUCKET = os.environ.get('FILTER_CONFIG_BUCKET')
 FILTER_CONFIG_FILE = os.environ.get('FILTER_CONFIG_FILE')
+SCOPES = ['https://spreadsheets.google.com/feeds']
+CREDENTIALS_FILE_PATH = os.environ.get('CREDENTIALS_FILE_PATH')
+SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
+WORKSHEET_NAME = os.environ.get('WORKSHEET_NAME')
+COLUMNS = {
+    'BUCKET_NAME': 0,
+    'CREATED_BY': 1,
+    'CREATED_AT': 2,
+    'WEIGHT': 3,
+    'ACCOUNT': 4,
+    'REGION': 5
+}
 
 s3client = boto3.client('s3')
 
@@ -86,7 +102,6 @@ def event_matches_config(config, target_object):
     if match:
         for include in config['includes']:
             match &= include in s_target_object
-    if match:
         for not_include in config['not_includes']:
             if not_include in s_target_object:
                 return False
@@ -130,6 +145,34 @@ def notify(config, subject, message):
         message, config['sns']['topicARN']))
 
 
+def add_row(values):
+    """Adds a row with the given values.
+
+    :param values: values to add (each value is a column).
+    """
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+        CREDENTIALS_FILE_PATH, scopes=SCOPES)
+    gc = gspread.authorize(credentials)
+    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(WORKSHEET_NAME)
+    sheet.append_row(values)
+
+
+def save_event(event):
+    """Saves the event to a Google Spreadsheet.
+
+    :param event: event to save.
+    """
+    values = [None] * len(COLUMNS.keys())
+    values[COLUMNS['BUCKET_NAME']] = event['requestParameters']['bucketName']
+    values[COLUMNS['CREATED_AT']] = datetime.now().strftime(
+        '%m/%d/%Y %H:%M:%S')  # Matching the Google Spreadsheet format
+    values[COLUMNS['CREATED_BY']] = event['userIdentity']['arn']
+    values[COLUMNS['WEIGHT']] = 0  # The bucket is empty when created
+    values[COLUMNS['ACCOUNT']] = event['recipientAccountId']
+    values[COLUMNS['REGION']] = event['awsRegion']
+    add_row(values)
+
+
 def main(event, context):
     logger.info('Handling event: {0}'.format(event))
     config = get_config()
@@ -138,9 +181,10 @@ def main(event, context):
     logger.info('Checking {0} events'.format(len(events)))
 
     notifications = {}
-    for obj in events:
-        if event_matches_config(config, obj):
-            notifications.update(get_notification(obj))
+    for ev in events:
+        if event_matches_config(config, ev):
+            save_event(ev)
+            notifications.update(get_notification(ev))
 
     for notify_subject in notifications:
         notify(config, notify_subject, notifications[notify_subject])
