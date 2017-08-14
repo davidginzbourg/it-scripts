@@ -15,7 +15,7 @@ DESTINATION = {'ToAddresses': TO_ADDRESSES}
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-ses_client = boto3.client('ses')
+ses_client = boto3.client('ses', region_name='eu-west-1')
 
 
 def main(event, context):
@@ -23,11 +23,8 @@ def main(event, context):
     Main handler.
     """
     sns_message = None
-    try:
-        logger.info('Handling event ' + json.dumps(event))
-        sns_message = event['Records'][0]['Sns']['Message']
-    except KeyError:
-        logger.error('Unexpected event format')
+    logger.info('Handling event ' + json.dumps(event))
+    sns_message = event['Records'][0]['Sns']['Message']
 
     sns_message = json.loads(sns_message)
     send_email(sns_message)
