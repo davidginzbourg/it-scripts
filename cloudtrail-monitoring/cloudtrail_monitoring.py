@@ -40,8 +40,9 @@ def get_config():
     fd, path = tempfile.mkstemp()
     os.close(fd)
     with open(path, 'wb') as tmp:
-        s3client.download_fileobj(
-            FILTER_CONFIG_BUCKET, FILTER_CONFIG_FILE, tmp)
+        tmp.write(s3client.get_object(
+            Bucket=FILTER_CONFIG_BUCKET,
+            Key=FILTER_CONFIG_FILE)['Body'].read())
     with open(path, 'r') as f:
         for line in f:
             raw_file += line
