@@ -46,11 +46,10 @@ def deploy_alarm(credentials, lambda_name, region):
         Dimensions=[{'Name': 'FunctionName', 'Value': lambda_name}],
         Statistic='Sum',
         Period=86400,
-        Unit='Seconds',
         EvaluationPeriods=1,
         Threshold=1,
         ComparisonOperator='GreaterThanOrEqualToThreshold',
-        TreatMissingData='missing')
+        TreatMissingData='notBreaching')
     add_resource_to_resources_file(
         'alarm: ' + alarm_name + ', region: ' + region)
 
