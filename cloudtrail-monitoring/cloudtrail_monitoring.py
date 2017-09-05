@@ -74,7 +74,11 @@ def get_raw_events(s3client, key):
     fd, path = tempfile.mkstemp()
     os.close(fd)
     with open(path, 'wb') as tmp:
-        s3client.download_fileobj(FILTER_CONFIG_BUCKET, key, tmp)
+        # s3client.download_fileobj(FILTER_CONFIG_BUCKET, key, tmp)
+        tmp.write(s3client.get_object(
+            Bucket=FILTER_CONFIG_BUCKET,
+            Key=key)['Body'].read())
+        logger.info('get_raw_events() after get_object')
 
     with gzip.open(path, 'r') as gz_file:
         for line in gz_file:
