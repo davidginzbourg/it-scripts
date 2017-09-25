@@ -1,11 +1,12 @@
 import os
 import json
 import gzip
-import boto3
 import logging
 import tempfile
 from datetime import datetime
 
+import boto3
+import botocore
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -27,7 +28,9 @@ COLUMNS = {
     'REGION': 5
 }
 
-s3client = boto3.client('s3')
+config = botocore.client.Config(connect_timeout=5, read_timeout=5)
+session = boto3.session.Session()
+s3client = session.client(service_name="s3", config=config)
 
 
 def get_config():
