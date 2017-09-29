@@ -38,18 +38,24 @@ def send_email(sns_message):
     subject = 'Attention required - AWS account ' + ACCOUNTS[
         sns_message['account']]
     logger.info('Building message HTML...')
-    message_html = '<html><body><h3>Description</h3>'
+    message_html = '<html><body><h3>Descriptions</h3>'
 
     for description in sns_message['detail']['eventDescription']:
         message_html += '<p>'
-        message_html += description['latestDescription']
+        if description['latestDescription']:
+            message_html += description['latestDescription']
+        else:
+            message_html += 'No description provided.'
         message_html += '</p>'
 
     message_html += '<h3>Affected resources</h3>'
 
     message_html += '<p>'
-    for entity in sns_message['detail']['affectedEntities']:
-        message_html += entity['entityValue'] + '\n'
+    if 'affectedEntities' in sns_message['detail']:
+        for entity in sns_message['detail']['affectedEntities']:
+            message_html += entity['entityValue'] + '\n'
+    else:
+        message_html += 'No affected resources.'
     message_html += '</p>'
 
     message_html += '</body></html>'
