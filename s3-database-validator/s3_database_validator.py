@@ -1,6 +1,7 @@
 import os
 import logging
 from datetime import datetime, timedelta
+from multiprocessing.dummy import Process, Lock
 from multiprocessing.dummy import Pool as ThreadPool
 
 import boto3
@@ -44,6 +45,7 @@ ACCOUNTS_NUMBER_TO_NAME = {
 ROLE_ARNS = {
     '11111111': {'RoleArn': os.getenv(
         ACCOUNTS_NUMBER_TO_NAME['111111'] + '_RoleArn')}
+}
 BUCKET_LIST = {
     '111111': set()
 }
@@ -173,46 +175,61 @@ def validate_data(credentials):
     contents = sheet.get_all_values()
     s3_clients = get_clients('s3', credentials)
     cloudwatch_clients = get_clients('cloudwatch', credentials)
+    bucket_names = set()
 
     for i in range(len(contents)):
         contents[i] = [i, contents[i]]
 
-    def update_cell_status(item):
+    def update_cell_status(item, lock):
         """Updates the cell's status, whether to delete or modify.
 
         :param item: item in the array of the spreadsheet contents.
+        :param lock: lock instance.
         """
         index = item[0]
 
-        def mark_cell_for_deletion(index):
+        def mark_cell_for_deletion():
             contents[index] = {'delete': True}
 
-        def mark_cell_for_modification(index, value):
+        def mark_cell_for_modification(value):
             contents[index] = {'value': value, 'index': index}
 
-        def mark_cell_neutral(index):
+        def mark_cell_neutral():
             contents[index] = {}
 
         curr_row = item[1]
-        if not is_exist(
-                curr_row[COLUMNS['BUCKET_NAME']],
+        bucket_name = curr_row[COLUMNS['BUCKET_NAME']]
+        lock.acquire()
+        duplicate = bucket_name in bucket_names
+        if not duplicate:
+            bucket_names.add(bucket_name)
+        lock.release()
+
+        if duplicate or not is_exist(
+                bucket_name,
                 s3_clients[curr_row[COLUMNS['ACCOUNT']]],
                 curr_row[COLUMNS['ACCOUNT']]):
-            mark_cell_for_deletion(index)
+            mark_cell_for_deletion()
         else:
             weight = get_bucket_size(
-                curr_row[COLUMNS['BUCKET_NAME']],
+                bucket_name,
                 cloudwatch_clients[curr_row[COLUMNS['ACCOUNT']]],
                 lambda x: round(x / 1000000.0, 2))
             if str(weight) != curr_row[COLUMNS['WEIGHT']]:
-                mark_cell_for_modification(index, weight)
+                mark_cell_for_modification(weight)
             else:
-                mark_cell_neutral(index)
+                mark_cell_neutral()
 
-    pool = ThreadPool()
     logger.info('Calculating updates...')
     # Main headers are also in contents
-    pool.map(update_cell_status, contents[1:])
+    lock = Lock()
+    processes = []
+    for i in contents[1:]:
+        p = Process(target=update_cell_status, args=(i, lock))
+        processes.append(p)
+        p.start()
+    for p in processes:
+        p.join()
     execute_updates(contents, sheet)
 
 
