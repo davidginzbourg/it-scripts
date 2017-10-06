@@ -1,0 +1,63 @@
+ps:
+    OS_AUTH_URL: 'https://compute.datacentred.io:5000/v3'
+    OS_USERNAME: '<USER>'
+    OS_PASSWORD: '<PASSWORD>'
+    project: 'datacentered_field1_primary'
+    flavors:
+        dc1.1x0: 0
+        dc1.1x1.20: 0
+        dc1.1x1: 0
+        dc1.1x1.80: 0
+        dc1.1x2.20: 0
+        dc1.1x2: 0
+        dc1.1x2.80: 0
+        dc1.2x2.40: 0
+        dc1.2x2: 0
+        dc1.2x4.40: 0
+        dc1.2x4: 0
+        dc1.2x8.40: 0
+        dc1.2x8: 0
+        dc1.4x8: 0
+        dc1.4x16: 0
+        dc1.8x16: 0
+        dc1.8x32: 0
+        dc1.16x32: 0
+
+rnd:
+    OS_AUTH_URL: 'https://compute.datacentred.io:5000/v3'
+    OS_USERNAME: '<USER>'
+    OS_PASSWORD: '<PASSWORD>'
+    project: 'gigaspaces_primary'
+    flavors:
+        dc1.1x0: 0
+        dc1.1x1.20: 0
+        dc1.1x1: 0
+        dc1.1x1.80: 0
+        dc1.1x2.20: 0
+        dc1.1x2: 0
+        dc1.1x2.80: 0
+        dc1.2x2.40: 0
+        dc1.2x2: 0
+        dc1.2x4.40: 0
+        dc1.2x4: 0
+        dc1.2x8.40: 0
+        dc1.2x8: 0
+        dc1.4x8: 0
+        dc1.4x16: 0
+        dc1.8x16: 0
+        dc1.8x32: 0
+        dc1.16x32: 0
+rackspace:
+    OS_AUTH_URL: 'https://rackspace-api.gigaspaces.com:5000/v3'
+    OS_USERNAME: '<USER>'
+    OS_PASSWORD: '<PASSWORD>'
+    project: 'admin'
+    flavors:
+        m1.tiny: 0
+        m1.small: 0
+        m1.medium: 0
+        m1.large: 0
+        m1.xlarge: 0
+        integration-tests: 0
+
+email_address_destination: '*@gigaspaces.com'
