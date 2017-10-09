@@ -1,0 +1,16 @@
+{
+  "source": [
+    "s3.amazonaws.com"
+  ],
+  "includes": [
+    "CreateBucket"
+  ],
+  "not_includes": [
+    "errorCode"
+  ],
+  "sns": {
+    "region": "eu-west-1",
+    "topicARN": "arn:aws:sns:eu-west-1:****:new_s3_bucket"
+  },
+  "comment": "Checks source in OR (if source is included in eventSource). Checks includes in AND along with not_includes"
+}
