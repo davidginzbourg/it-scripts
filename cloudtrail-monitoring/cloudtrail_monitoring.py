@@ -239,12 +239,13 @@ def save_event(event):
 
 def main(event, context):
     if (time.time() - credentials_last_refresh) >= REFRESH_PERIOD:
+        logger.info('Resetting IAM Role credentials...')
         set_credentials(sts_client)
-    logger.info('Handling event: {0}'.format(event))
+    logger.info('Handling event: {0}...'.format(event))
     config = get_config()
     logger.info('Fetched the following config: {0}'.format(config))
     events = get_events(event)
-    logger.info('Checking {0} events'.format(len(events)))
+    logger.info('Checking {0} events...'.format(len(events)))
 
     notifications = {}
     for ev in events:
