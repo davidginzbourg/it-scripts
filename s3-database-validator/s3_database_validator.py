@@ -9,6 +9,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 sts_client = boto3.client('sts')
+
 logger = logging.getLogger()
 logger.level = logging.INFO
 
@@ -30,6 +31,22 @@ WORKSHEET_NAME = os.environ.get('WORKSHEET_NAME')
 if not WORKSHEET_NAME:
     raise Exception('Missing WORKSHEET_NAME env var')
 
+REGIONS = [
+    'us-east-1',
+    'us-west-1',
+    'eu-west-1',
+    'eu-central-1',
+    'eu-west-2',
+    'us-east-2',
+    'us-west-2',
+    'ca-central-1',
+    'ap-south-1',
+    'ap-northeast-2',
+    'ap-southeast-1',
+    'ap-southeast-2',
+    'ap-northeast-1',
+    'sa-east-1'
+]
 COLUMNS = {
     'BUCKET_NAME': 0,
     'CREATED_BY': 1,
@@ -71,8 +88,8 @@ def get_bucket_size(bucket_name, client, byte_conv_fun=lambda x: x):
                 "Value": "StandardStorage"
             }
         ],
-        StartTime=datetime.now() - timedelta(days=2),
-        EndTime=datetime.now(),
+        StartTime=datetime.utcnow() - timedelta(days=2),
+        EndTime=datetime.utcnow(),
         Period=86400,
         Statistics=['Average']
     )
@@ -127,11 +144,15 @@ def execute_updates(contents, sheet):
     """
 
     def handle_update_value(item):
-        if 'value' in item and 'index' in item:
+        if 'weight' in item and 'region' in item and 'index' in item:
             sheet.update_cell(
                 item['index'] + 1,
                 COLUMNS['WEIGHT'] + 1,
-                item['value'])
+                item['weight'])
+            sheet.update_cell(
+                item['index'] + 1,
+                COLUMNS['REGION'] + 1,
+                item['region'])
 
     pool = ThreadPool()
     logger.info('Executing value updates...')
@@ -144,23 +165,48 @@ def execute_updates(contents, sheet):
             sheet.delete_row(i + 1)
 
 
-def get_clients(service_name, credentials):
-    """Returns a dict of service_name clients, keys are the account number.
+def get_clients(service_name, credentials, region_name='us-east-1'):
+    """Returns a dict of service_name clients, keys are the account number, for
+    a single region.
 
     :param service_name: service name to use with boto3
     :param credentials: credentials dict.
+    :param region_name: region to instantiate the clients for.
     :return:
     """
     clients = {}
 
     def get_service_client((account_num, cred_dict)):
-        clients[account_num] = boto3.client(service_name, **cred_dict)
+        clients[account_num] = boto3.client(
+            service_name,
+            region_name=region_name,
+            **cred_dict)
 
     pool = ThreadPool()
-    logger.info('Creating {0} clients...'.format(service_name))
+    logger.info(
+        'Creating {0} clients in region {1}...'.format(
+            service_name,
+            region_name))
     pool.map(get_service_client, credentials.items())
 
     return clients
+
+
+def get_clients_all_regions(service_name, credentials):
+    """Returns a dict of service_name clients for each region, keys are the
+    region name. Each inner dict's keys are the account numbers.
+
+    :param service_name: service name to use with boto3
+    :param credentials: credentials dict.
+    :return:
+    """
+    regional_clients = {}
+    for region in REGIONS:
+        regional_clients[region] = get_clients(
+            service_name,
+            credentials,
+            region)
+    return regional_clients
 
 
 def validate_data(credentials):
@@ -174,7 +220,7 @@ def validate_data(credentials):
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(WORKSHEET_NAME)
     contents = sheet.get_all_values()
     s3_clients = get_clients('s3', credentials)
-    cloudwatch_clients = get_clients('cloudwatch', credentials)
+    cloudwatch_clients = get_clients_all_regions('cloudwatch', credentials)
     bucket_names = set()
 
     for i in range(len(contents)):
@@ -191,13 +237,17 @@ def validate_data(credentials):
         def mark_cell_for_deletion():
             contents[index] = {'delete': True}
 
-        def mark_cell_for_modification(value):
-            contents[index] = {'value': value, 'index': index}
+        def mark_cell_for_modification(weight, region):
+            contents[index] = {
+                'weight': weight,
+                'region': region,
+                'index': index}
 
         def mark_cell_neutral():
             contents[index] = {}
 
         curr_row = item[1]
+        account = curr_row[COLUMNS['ACCOUNT']]
         bucket_name = curr_row[COLUMNS['BUCKET_NAME']]
         lock.acquire()
         duplicate = bucket_name in bucket_names
@@ -207,16 +257,32 @@ def validate_data(credentials):
 
         if duplicate or not is_exist(
                 bucket_name,
-                s3_clients[curr_row[COLUMNS['ACCOUNT']]],
-                curr_row[COLUMNS['ACCOUNT']]):
+                s3_clients[account],
+                account):
             mark_cell_for_deletion()
         else:
+            actual_region = curr_row[COLUMNS['REGION']]
+            if not actual_region:
+                actual_region = REGIONS[0]
             weight = get_bucket_size(
                 bucket_name,
-                cloudwatch_clients[curr_row[COLUMNS['ACCOUNT']]],
+                cloudwatch_clients[actual_region][account],
                 lambda x: round(x / 1000000.0, 2))
-            if str(weight) != curr_row[COLUMNS['WEIGHT']]:
-                mark_cell_for_modification(weight)
+            if weight == -1:
+                for region in REGIONS:
+                    if region != actual_region:
+                        weight = get_bucket_size(
+                            bucket_name,
+                            cloudwatch_clients[region][account],
+                            lambda x: round(x / 1000000.0, 2))
+                        if weight != -1:
+                            actual_region = region
+                            break
+                else:
+                    actual_region = ''
+            if str(weight) != curr_row[COLUMNS['WEIGHT']] \
+                    or actual_region != curr_row[COLUMNS['REGION']]:
+                mark_cell_for_modification(weight, actual_region)
             else:
                 mark_cell_neutral()
 
@@ -224,10 +290,16 @@ def validate_data(credentials):
     # Main headers are also in contents
     lock = Lock()
     processes = []
-    for i in contents[1:]:
-        p = Process(target=update_cell_status, args=(i, lock))
+    i = 1
+    while i < len(contents[1:]):
+        p = Process(target=update_cell_status, args=(contents[i], lock))
         processes.append(p)
         p.start()
+        if len(processes) >= 10:
+            for j in range(len(processes)):
+                processes.pop().join()
+        i += 1
+    # End the remaining processes
     for p in processes:
         p.join()
     execute_updates(contents, sheet)
