@@ -13,6 +13,8 @@ OUTPUT_PATH = 2
 GEOLITE_CITY_DB_PATH = 3
 CIDR_TO_ORG_DB_PATH = 4
 
+TIME_OUTPUT_FORMAT='%Y-%m-%d %H:%M:%S'
+
 
 def get_matching_cidrs(ip):
     ip_bits = bin(iptools.ipv4.ip2long(ip))[2:]
@@ -56,7 +58,7 @@ def parse_line_wrapper(responses, init_output, geoip2_reader,
         time_instance = datetime.datetime.strptime(
             re.sub('\s(\+|-)\d{4}', '', t),
             '%d/%b/%Y:%H:%M:%S')
-        time_str = time_instance.strftime('%m/%d/%Y')
+        time_str = time_instance.strftime(TIME_OUTPUT_FORMAT)
         if ip not in responses:
             responses[ip] = get_ip_dict(
                 ip,
@@ -122,7 +124,7 @@ def main():
         sorted(
             init_output.items(),
             key=lambda y: tuple(
-                [datetime.datetime.strptime(y[0][0], '%m/%d/%Y')] + list(
+                [datetime.datetime.strptime(y[0][0], TIME_OUTPUT_FORMAT)] + list(
                     y[0][1:]))))
     print('Writing output...')
     with open(sys.argv[OUTPUT_PATH], 'w') as f:
