@@ -1,6 +1,6 @@
 import re
 import sys
-import datetime
+from datetime import datetime
 from multiprocessing.dummy import Pool as ThreadPool
 
 import csv
@@ -23,7 +23,7 @@ def get_matching_cidrs(ip):
     for i in range(32):
         prefix = '0b' + ip_bits[:i + 1]
         suffix = '0' * (32 - (i + 1))
-        ip = long(prefix + suffix, base=2)
+        ip = int(prefix + suffix, base=2)
         cidr = str(iptools.ipv4.long2ip(ip)) + '/' + str(i + 1)
         cidrs.append(cidr)
     return cidrs
@@ -55,7 +55,7 @@ def parse_line_wrapper(responses, init_output, geoip2_reader,
         ip = ip_matcher.group(0) if ip_matcher else 'Unknown'
         time_matcher = re.search('\[(.+?)\]', line)
         t = time_matcher.group(1) if time_matcher else '01/Jan/1970:00:00:00'
-        time_instance = datetime.datetime.strptime(
+        time_instance = datetime.strptime(
             re.sub('\s(\+|-)\d{4}', '', t),
             '%d/%b/%Y:%H:%M:%S')
         time_str = time_instance.strftime(TIME_OUTPUT_FORMAT)
@@ -124,7 +124,7 @@ def main():
         sorted(
             init_output.items(),
             key=lambda y: tuple(
-                [datetime.datetime.strptime(y[0][0], TIME_OUTPUT_FORMAT)] + list(
+                [datetime.strptime(y[0][0], TIME_OUTPUT_FORMAT)] + list(
                     y[0][1:]))))
     print('Writing output...')
     with open(sys.argv[OUTPUT_PATH], 'w') as f:
