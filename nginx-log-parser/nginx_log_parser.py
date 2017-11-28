@@ -100,14 +100,21 @@ def main():
     geoip2_reader = geoip2.database.Reader(sys.argv[GEOLITE_CITY_DB_PATH])
 
     print('Processing IPs...')
-    pool = ThreadPool()
-    pool.map(
-        parse_line_wrapper(
+    # pool = ThreadPool()
+    # pool.map(
+    #     parse_line_wrapper(
+    #         responses,
+    #         init_output,
+    #         geoip2_reader,
+    #         cidr_to_org_dict),
+    #     content)
+    process_func = arse_line_wrapper(
             responses,
             init_output,
             geoip2_reader,
-            cidr_to_org_dict),
-        content)
+            cidr_to_org_dict)
+    for line in content:
+    	process_func(line)
 
     geoip2_reader.close()
 
