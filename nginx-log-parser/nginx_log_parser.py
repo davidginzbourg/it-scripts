@@ -108,7 +108,7 @@ def main():
     #         geoip2_reader,
     #         cidr_to_org_dict),
     #     content)
-    process_func = arse_line_wrapper(
+    process_func = parse_line_wrapper(
             responses,
             init_output,
             geoip2_reader,
