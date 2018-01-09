@@ -1,0 +1,36 @@
+create 0644 nginx nginx
+daily
+rotate 10
+missingok
+notifempty
+sharedscripts
+dateext
+dateformat -%Y%m%d
+compress
+postrotate
+    /etc/init.d/nginx reopen_logs
+endscript
+
+/var/log/nginx/access.log {
+    delaycompress
+    prerotate
+        export CLOUDSDK_PYTHON=/usr/bin/python2.7
+        export AWS_ACCESS_KEY_ID="$(cat ***/.aws/credentials | grep aws_access_key_id | sed -e "s/aws_access_key_id\s*=\s*//g" -e "s/\s*//g")"
+        export AWS_SECRET_ACCESS_KEY="$(cat ***/.aws/credentials | grep aws_secret_access_key | sed -e "s/aws_secret_access_key\s*=\s*//g" -e "s/\s*//g")"
+        OUTPUT=$(date +"%Y%m%d")
+        python ***/nginx_logrotate_python/nginx_log_parser.py /var/log/nginx/access.log /var/log/nginx/$OUTPUT.access.log.processed ***/nginx_logrotate_python/GeoLite2-City.mmdb ***/nginx_logrotate_python/cidr_to_org_db.json
+        ***/nginx_logrotate_python/google-cloud-sdk/bin/gcloud auth activate-service-account "service_account_name" --key-file=***/nginx_logrotate_python/creds.json
+        ***/nginx_logrotate_python/google-cloud-sdk/bin/bq load --source_format=CSV cloudify_proxy.nginx_logs /var/log/nginx/$OUTPUT.access.log.processed
+        /usr/bin/aws s3 sync /var/log/nginx/. s3://s3_bucket_name --exclude='*' --include='*.access.log.processed'
+        rm -f /var/log/nginx/*.access.log.processed
+    endscript
+    postrotate
+        /etc/init.d/nginx reopen_logs
+        export AWS_ACCESS_KEY_ID="$(cat ***/.aws/credentials | grep aws_access_key_id | sed -e "s/aws_access_key_id\s*=\s*//g" -e "s/\s*//g")"
+        export AWS_SECRET_ACCESS_KEY="$(cat ***/.aws/credentials | grep aws_secret_access_key | sed -e "s/aws_secret_access_key\s*=\s*//g" -e "s/\s*//g")"
+        /usr/bin/aws s3 sync /var/log/nginx/. s3://s3_bucket_name --exclude='*' --include='access.log-*.gz'
+    endscript
+}
+/var/log/nginx/error.log{
+}
+
