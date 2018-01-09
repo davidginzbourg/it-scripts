@@ -1,6 +1,6 @@
 import re
 import sys
-import datetime
+from datetime import datetime
 from multiprocessing.dummy import Pool as ThreadPool
 
 import csv
@@ -13,6 +13,8 @@ OUTPUT_PATH = 2
 GEOLITE_CITY_DB_PATH = 3
 CIDR_TO_ORG_DB_PATH = 4
 
+TIME_OUTPUT_FORMAT='%Y-%m-%d %H:%M:%S'
+
 
 def get_matching_cidrs(ip):
     ip_bits = bin(iptools.ipv4.ip2long(ip))[2:]
@@ -21,7 +23,7 @@ def get_matching_cidrs(ip):
     for i in range(32):
         prefix = '0b' + ip_bits[:i + 1]
         suffix = '0' * (32 - (i + 1))
-        ip = long(prefix + suffix, base=2)
+        ip = int(prefix + suffix, base=2)
         cidr = str(iptools.ipv4.long2ip(ip)) + '/' + str(i + 1)
         cidrs.append(cidr)
     return cidrs
@@ -53,10 +55,10 @@ def parse_line_wrapper(responses, init_output, geoip2_reader,
         ip = ip_matcher.group(0) if ip_matcher else 'Unknown'
         time_matcher = re.search('\[(.+?)\]', line)
         t = time_matcher.group(1) if time_matcher else '01/Jan/1970:00:00:00'
-        time_instance = datetime.datetime.strptime(
+        time_instance = datetime.strptime(
             re.sub('\s(\+|-)\d{4}', '', t),
             '%d/%b/%Y:%H:%M:%S')
-        time_str = time_instance.strftime('%m/%d/%Y')
+        time_str = time_instance.strftime(TIME_OUTPUT_FORMAT)
         if ip not in responses:
             responses[ip] = get_ip_dict(
                 ip,
@@ -98,14 +100,21 @@ def main():
     geoip2_reader = geoip2.database.Reader(sys.argv[GEOLITE_CITY_DB_PATH])
 
     print('Processing IPs...')
-    pool = ThreadPool()
-    pool.map(
-        parse_line_wrapper(
+    # pool = ThreadPool()
+    # pool.map(
+    #     parse_line_wrapper(
+    #         responses,
+    #         init_output,
+    #         geoip2_reader,
+    #         cidr_to_org_dict),
+    #     content)
+    process_func = parse_line_wrapper(
             responses,
             init_output,
             geoip2_reader,
-            cidr_to_org_dict),
-        content)
+            cidr_to_org_dict)
+    for line in content:
+    	process_func(line)
 
     geoip2_reader.close()
 
@@ -122,7 +131,7 @@ def main():
         sorted(
             init_output.items(),
             key=lambda y: tuple(
-                [datetime.datetime.strptime(y[0][0], '%m/%d/%Y')] + list(
+                [datetime.strptime(y[0][0], TIME_OUTPUT_FORMAT)] + list(
                     y[0][1:]))))
     print('Writing output...')
     with open(sys.argv[OUTPUT_PATH], 'w') as f:
