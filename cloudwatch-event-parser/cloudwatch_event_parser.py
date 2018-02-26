@@ -43,7 +43,7 @@ def send_email(sns_message):
     for description in sns_message['detail']['eventDescription']:
         message_html += '<p>'
         if description['latestDescription']:
-            message_html += description['latestDescription']
+            message_html += description['latestDescription'].replace('\\n', '<br />')
         else:
             message_html += 'No description provided.'
         message_html += '</p>'
