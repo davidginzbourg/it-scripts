@@ -1,7 +1,9 @@
 import os
 import urllib2
-import xml.etree.ElementTree as ET
 import logging
+import datetime
+import dateutil.parser
+import xml.etree.ElementTree as ET
 
 import boto3
 
@@ -51,7 +53,11 @@ def is_about_to_expire(warranty_info, expiration_threshold):
      included in the email.
     :return: whether the item warranty is about to expire.
     """
-    pass
+    warranty_end_date = dateutil.parser.parse(
+        warranty_info['end_date']).replace(tzinfo=None)
+    expiration_date = datetime.datetime.utcnow() - datetime.timedelta(
+        seconds=expiration_threshold)
+    return warranty_end_date - expiration_date <= datetime.timedelta(0)
 
 
 def send_email(about_to_expire, no_warranty_date):
@@ -94,7 +100,7 @@ def main():
         raise Exception('No TOKEN env var was found.')
     expiration_threshold = os.getenv('EXPIRATION_THRESHOLD', None)
     if not expiration_threshold:
-        raise Exception('No EXPIRATION_THRESHOLD env var was found.')
+        raise Exception('No EXPIRATION_THRESHOLD (seconds) env var was found.')
     hardware_list = list_hardware(token)
     about_to_expire = []
     no_warranty_date = []
