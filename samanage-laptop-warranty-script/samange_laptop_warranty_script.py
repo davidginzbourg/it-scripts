@@ -13,6 +13,15 @@ logger.setLevel(logging.DEBUG)
 ses_client = boto3.client('ses', region_name='eu-west-1')
 
 BASE_URL = 'https://api.samanage.com/'
+SOURCE = os.getenv('SOURCE', None)
+if not SOURCE:
+    raise Exception('No SOURCE env var was set.')
+DESTINATION = os.getenv('DESTINATION', None)
+if not DESTINATION:
+    raise Exception('No DESTINATION env var was set.')
+SUBJECT = os.getenv('SUBJECT', None)
+if not SUBJECT:
+    raise Exception('No SUBJECT env var was set.')
 
 
 # e = xml.etree.ElementTree.parse('thefile.xml').getroot()
@@ -70,7 +79,74 @@ def send_email(about_to_expire, no_warranty_date):
      have a warranty date enetered for them.
     :return:
     """
-    pass
+    message_html = """
+    <html>
+    <head>
+    <style>
+    table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    tr:nth-child(even) {
+        background-color: #dddddd;
+    }
+    </style>
+    </head>
+    <body>
+
+    """
+    message_html += "<h2>Hardware that is about to expire</h2>"
+    message_html += """<table>
+    <tr>
+    <th>Hardware name</th>
+    <th>Warranty end date</th>
+    </tr>"""
+    for item in about_to_expire:
+        message_html += '<tr>'
+
+        message_html += '<td>'
+        message_html += item[0]['name']
+        message_html += '</td>'
+
+        message_html += '<td>'
+        message_html += str(dateutil.parser.parse(item[1]['end_date']).replace(
+            tzinfo=None))
+        message_html += '</td>'
+
+        message_html += '</tr>'
+    message_html += "</table>"
+
+    message_html += "<h2>Hardware that that has no warranty end date</h2>"
+    message_html += """<table>
+    <tr>
+    <th>Hardware name</th>
+    </tr>"""
+    for item in about_to_expire:
+        message_html += '<tr>'
+
+        message_html += '<td>'
+        message_html += item['name']
+        message_html += '</td>'
+
+        message_html += '</tr>'
+    message_html += "</table>"
+
+    message_html += "</body></html>"
+    message_id = ses_client.send_email(Source=SOURCE, Destination=DESTINATION,
+                                       Message={
+                                           'Subject': {'Data': SUBJECT},
+                                           'Body': {
+                                               'Html': {'Data': message_html}}
+                                       })['MessageId']
+    logger.info('Sent a message, ID: ' + message_id)
 
 
 def get_warranty_end_date(item_info, token):
@@ -97,10 +173,10 @@ def main():
      """
     token = os.getenv('TOKEN', None)
     if not token:
-        raise Exception('No TOKEN env var was found.')
+        raise Exception('No TOKEN env var was set.')
     expiration_threshold = os.getenv('EXPIRATION_THRESHOLD', None)
     if not expiration_threshold:
-        raise Exception('No EXPIRATION_THRESHOLD (seconds) env var was found.')
+        raise Exception('No EXPIRATION_THRESHOLD (seconds) env var was set.')
     hardware_list = list_hardware(token)
     about_to_expire = []
     no_warranty_date = []
