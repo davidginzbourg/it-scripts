@@ -165,6 +165,7 @@ def get_warranty_end_date(item_info, token):
         return None
     if 'href' in item_info:
         return get_xml_response(item_info['href'], token)
+    return None
 
 
 def main():
