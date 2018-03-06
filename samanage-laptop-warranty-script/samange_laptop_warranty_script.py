@@ -160,11 +160,13 @@ def get_warranty_end_date(item_info, token):
     href_element = item_info.find('href')
     if name_element is not None:
         logger.info(
-            'Getting item warranties info for {0}'.format(name_element.text))
+            'Getting item warranties info for {0}'.format(name_element.text.encode('utf-8')))
     else:
         return None
     if href_element is not None:
-        return get_xml_response(href_element.text, token)
+        response = get_xml_response(href_element.text, token)
+        if response.find('end_date') is not None:
+            return response
     return None
 
 
@@ -182,10 +184,10 @@ def main():
     about_to_expire = []
     no_warranty_date = []
     for item_info in hardware_list:
-        warranty_date = get_warranty_end_date(item_info, token)
-        if not warranty_date:
+        warranty_info = get_warranty_end_date(item_info, token)
+        if warranty_info is None:
             no_warranty_date.append(item_info)
-        elif is_about_to_expire(warranty_date, expiration_threshold):
-            about_to_expire.append((item_info, warranty_date))
+        elif is_about_to_expire(warranty_info, expiration_threshold):
+            about_to_expire.append((item_info, warranty_info))
     send_email(about_to_expire, no_warranty_date)
     return True
