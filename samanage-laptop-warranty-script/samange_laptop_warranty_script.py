@@ -40,9 +40,9 @@ def get_xml_response(url, token):
     request.add_header('X-Samanage-Authorization', 'Bearer {0}'.format(token))
     request.add_header('Accept', 'application/vnd.samanage.v2.1+xml')
     logger.debug('Sending the request...')
-    response = request.read()
+    response = urllib2.urlopen(request).read()
     logger.debug('Received a response.')
-    return ET.fromstring(response).getroot()
+    return ET.fromstring(response)
 
 
 def list_hardware(token):
@@ -59,13 +59,13 @@ def is_about_to_expire(warranty_info, expiration_threshold):
     """
     :param warranty_info: warranty info of the item (XML root).
     :param expiration_threshold: the expiration threshold for the item to be
-     included in the email.
+     included in the email (days).
     :return: whether the item warranty is about to expire.
     """
     warranty_end_date = dateutil.parser.parse(
-        warranty_info['end_date']).replace(tzinfo=None)
+        warranty_info.find('end_date').text).replace(tzinfo=None)
     expiration_date = datetime.datetime.utcnow() - datetime.timedelta(
-        seconds=expiration_threshold)
+        days=expiration_threshold)
     return warranty_end_date - expiration_date <= datetime.timedelta(0)
 
 
@@ -117,8 +117,9 @@ def send_email(about_to_expire, no_warranty_date):
         message_html += '</td>'
 
         message_html += '<td>'
-        message_html += str(dateutil.parser.parse(item[1]['end_date']).replace(
-            tzinfo=None))
+        message_html += str(
+            dateutil.parser.parse(item[1].find('end_date').text).replace(
+                tzinfo=None))
         message_html += '</td>'
 
         message_html += '</tr>'
@@ -133,7 +134,7 @@ def send_email(about_to_expire, no_warranty_date):
         message_html += '<tr>'
 
         message_html += '<td>'
-        message_html += item['name']
+        message_html += item.fine('name').text
         message_html += '</td>'
 
         message_html += '</tr>'
@@ -155,16 +156,15 @@ def get_warranty_end_date(item_info, token):
     :param token: token to get info with.
     :return: the hardware item info, or None if it is corrupt.
     """
-    if 'name' in item_info:
+    name_element = item_info.find('name')
+    href_element = item_info.find('href')
+    if name_element is not None:
         logger.info(
-            'Getting item warranties info for {0}'.format(item_info['name']))
-    elif 'href' in item_info:
-        logger.info(
-            'Getting item warranties info for {0}'.format(item_info['href']))
+            'Getting item warranties info for {0}'.format(name_element.text))
     else:
         return None
-    if 'href' in item_info:
-        return get_xml_response(item_info['href'], token)
+    if href_element is not None:
+        return get_xml_response(href_element.text, token)
     return None
 
 
@@ -177,7 +177,7 @@ def main():
         raise Exception('No TOKEN env var was set.')
     expiration_threshold = os.getenv('EXPIRATION_THRESHOLD', None)
     if not expiration_threshold:
-        raise Exception('No EXPIRATION_THRESHOLD (seconds) env var was set.')
+        raise Exception('No EXPIRATION_THRESHOLD (days) env var was set.')
     hardware_list = list_hardware(token)
     about_to_expire = []
     no_warranty_date = []
