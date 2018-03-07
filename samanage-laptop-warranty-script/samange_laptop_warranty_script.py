@@ -123,20 +123,21 @@ def send_email(about_to_expire, no_warranty_date):
         message_html += '</tr>'
     message_html += "</table>"
 
-    message_html += "<h2>Hardware that that has no warranty end date</h2>"
-    message_html += """<table>
-    <tr>
-    <th>Hardware name</th>
-    </tr>"""
-    for item in no_warranty_date:
-        message_html += '<tr>'
+    if len(no_warranty_date) > 0:
+        message_html += "<h2>Hardware that that has no warranty end date</h2>"
+        message_html += """<table>
+        <tr>
+        <th>Hardware name</th>
+        </tr>"""
+        for item in no_warranty_date:
+            message_html += '<tr>'
 
-        message_html += '<td>'
-        message_html += item.find('name').text
-        message_html += '</td>'
-
-        message_html += '</tr>\n'
-    message_html += "</table>"
+            message_html += '<td>'
+            message_html += item.find('name').text
+            message_html += '</td>'
+    
+            message_html += '</tr>\n'
+        message_html += "</table>"
 
     message_html += "</body></html>"
     message_id = ses_client.send_email(Source=SOURCE, Destination=DESTINATION,
