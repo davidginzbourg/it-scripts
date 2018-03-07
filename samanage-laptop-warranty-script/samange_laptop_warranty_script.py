@@ -55,15 +55,13 @@ def list_hardware(token):
     return get_xml_response('{0}hardwares.xml'.format(BASE_URL), token)
 
 
-def is_about_to_expire(warranty_info, expiration_threshold):
+def is_about_to_expire(warranty_end_date, expiration_threshold):
     """
-    :param warranty_info: warranty info of the item (XML root).
+    :param warranty_end_date: warranty info of the item (XML root).
     :param expiration_threshold: the expiration threshold for the item to be
      included in the email (days).
     :return: whether the item warranty is about to expire.
     """
-    warranty_end_date = dateutil.parser.parse(
-        warranty_info.find('end_date').text).replace(tzinfo=None)
     expiration_date = datetime.datetime.utcnow() - datetime.timedelta(
         days=expiration_threshold)
     return warranty_end_date - expiration_date <= datetime.timedelta(0)
@@ -74,7 +72,8 @@ def send_email(about_to_expire, no_warranty_date):
     date list.
 
     :param about_to_expire: a list of hardware items  (XML roots) that warranty
-     is about to expire [a tuple, [0] is the item name
+     is about to expire where each item is a tuple, [0] is the item name and
+     [1] is the end date.
     :param no_warranty_date: a list of hardware items  (XML roots) that don't
      have a warranty date enetered for them.
     :return:
