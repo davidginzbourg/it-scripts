@@ -16,9 +16,10 @@ BASE_URL = 'https://api.samanage.com/'
 SOURCE = os.getenv('SOURCE', None)
 if not SOURCE:
     raise Exception('No SOURCE env var was set.')
-DESTINATION = os.getenv('DESTINATION', None)
-if not DESTINATION:
-    raise Exception('No DESTINATION env var was set.')
+TO_ADDRESSES = [os.getenv('TO_ADDRESSES', None)]
+if not TO_ADDRESSES:
+    raise Exception('No TO_ADDRESSES env var was set.')
+DESTINATION = {'ToAddresses': TO_ADDRESSES}
 SUBJECT = os.getenv('SUBJECT', None)
 if not SUBJECT:
     raise Exception('No SUBJECT env var was set.')
@@ -112,13 +113,11 @@ def send_email(about_to_expire, no_warranty_date):
         message_html += '<tr>'
 
         message_html += '<td>'
-        message_html += item[0]['name']
+        message_html += item[0].find('name').text
         message_html += '</td>'
 
         message_html += '<td>'
-        message_html += str(
-            dateutil.parser.parse(item[1].find('end_date').text).replace(
-                tzinfo=None))
+        message_html += str(item[1])
         message_html += '</td>'
 
         message_html += '</tr>'
@@ -129,14 +128,14 @@ def send_email(about_to_expire, no_warranty_date):
     <tr>
     <th>Hardware name</th>
     </tr>"""
-    for item in about_to_expire:
+    for item in no_warranty_date:
         message_html += '<tr>'
 
         message_html += '<td>'
-        message_html += item.fine('name').text
+        message_html += item.find('name').text
         message_html += '</td>'
 
-        message_html += '</tr>'
+        message_html += '</tr>\n'
     message_html += "</table>"
 
     message_html += "</body></html>"
@@ -163,14 +162,14 @@ def get_warranty_end_date(item_info, token):
                 name_element.text.encode('utf-8')))
     else:
         return None
-    if href_element is not None:
+    if href_element is not None and href_element.text is not None:
         hardware_id = href_element.text.split('/')[-1].split('.')[0]
-        url = 'https://api.samanage.com/hardwares/{0}/warranties.xml'.format(
-            hardware_id)
+        url = '{0}/hardwares/{1}/warranties.xml'.format(BASE_URL, hardware_id)
         response = get_xml_response(url, token)
         latest_end_date = None
         for warranty in response:
-            if warranty.find('end_date') is not None:
+            if warranty.find('end_date') is not None \
+                    and warranty.find('end_date').text is not None:
                 curr_end_date = dateutil.parser.parse(
                     warranty.find('end_date').text).replace(tzinfo=None)
                 if latest_end_date is None:
@@ -189,17 +188,17 @@ def main():
     token = os.getenv('TOKEN', None)
     if not token:
         raise Exception('No TOKEN env var was set.')
-    expiration_threshold = os.getenv('EXPIRATION_THRESHOLD', None)
+    expiration_threshold = int(os.getenv('EXPIRATION_THRESHOLD', None))
     if not expiration_threshold:
         raise Exception('No EXPIRATION_THRESHOLD (days) env var was set.')
     hardware_list = list_hardware(token)
     about_to_expire = []
     no_warranty_date = []
-    for item_info in hardware_list:
-        warranty_info = get_warranty_end_date(item_info, token)
-        if warranty_info is None:
+    for item_info in hardware_list.findall('hardware'):
+        warranty_end_date = get_warranty_end_date(item_info, token)
+        if warranty_end_date is None:
             no_warranty_date.append(item_info)
-        elif is_about_to_expire(warranty_info, expiration_threshold):
-            about_to_expire.append((item_info, warranty_info))
+        elif is_about_to_expire(warranty_end_date, expiration_threshold):
+            about_to_expire.append((item_info, warranty_end_date))
     send_email(about_to_expire, no_warranty_date)
     return True
