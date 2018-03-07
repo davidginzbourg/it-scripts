@@ -165,9 +165,21 @@ def get_warranty_end_date(item_info, token):
     else:
         return None
     if href_element is not None:
-        response = get_xml_response(href_element.text, token)
-        if response.find('end_date') is not None:
-            return response
+        hardware_id = href_element.text.split('/')[-1].split('.')[0]
+        url = 'https://api.samanage.com/hardwares/{0}/warranties.xml'.format(
+            hardware_id)
+        response = get_xml_response(url, token)
+        latest_end_date = None
+        for warranty in response:
+            if warranty.find('end_date') is not None:
+                curr_end_date = dateutil.parser.parse(
+                    warranty.find('end_date').text).replace(tzinfo=None)
+                if latest_end_date is None:
+                    latest_end_date = curr_end_date
+                else:
+                    if latest_end_date < curr_end_date:
+                        latest_end_date = curr_end_date
+        return latest_end_date
     return None
 
 
