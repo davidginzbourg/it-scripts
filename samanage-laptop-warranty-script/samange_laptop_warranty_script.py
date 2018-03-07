@@ -135,7 +135,7 @@ def send_email(about_to_expire, no_warranty_date):
             message_html += '<td>'
             message_html += item.find('name').text
             message_html += '</td>'
-    
+            
             message_html += '</tr>\n'
         message_html += "</table>"
 
@@ -182,7 +182,7 @@ def get_warranty_end_date(item_info, token):
     return None
 
 
-def main():
+def main(event, context):
     """Main function to run, make sure that the environmental variable TOKEN is
      setup properly
      """
