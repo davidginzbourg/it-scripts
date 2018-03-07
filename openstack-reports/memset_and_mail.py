@@ -41,10 +41,9 @@ def set_environ_vars(config_file):
     for key, value in conf_vars['ENV_VARS'].items():
         os.environ[key] = value
     flavor_count = conf_vars['flavors']
-    metric_suffix = conf_vars['metric_suffix']
     destination_email_address = conf_vars['destination_email_address']
-    source_email_address = conf_vars['gmail_source_mail']
-    source_email_address_password = conf_vars['gmail_app_password']
+    source_email_address = conf_vars['source_email_address']
+    source_email_address_password = conf_vars['source_email_address_password']
     global flavor_count
     global metric_suffix
     global destination_email_address
@@ -92,3 +91,6 @@ def main():
             msg += str(key) + '\t' + str(value) + '\n'
 
     send_mail(subject="Memset Daily Report", msg=msg)
+
+if __name__ == '__main__':
+    main()
