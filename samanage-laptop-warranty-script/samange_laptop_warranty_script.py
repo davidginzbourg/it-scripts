@@ -160,7 +160,8 @@ def get_warranty_end_date(item_info, token):
     href_element = item_info.find('href')
     if name_element is not None:
         logger.info(
-            'Getting item warranties info for {0}'.format(name_element.text.encode('utf-8')))
+            'Getting item warranties info for {0}'.format(
+                name_element.text.encode('utf-8')))
     else:
         return None
     if href_element is not None:
