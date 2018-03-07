@@ -81,16 +81,16 @@ def main():
     config_file = '{0}.yaml'.format(filename)
     flavor_count, tenants_instances = get_data(config_file)
     msg = ''
-    with open(filename, 'w') as outfile:
-        for key, value in sorted(tenants_instances.items(), key=lambda e: e[1],
-                                 reverse=True):
-            msg += str(key) + '\t' + str(value) + '\n'
-        outfile.write('\n\n')
-        for key, value in sorted(flavor_count.items(), key=lambda e: e[1],
-                                 reverse=True):
-            msg += str(key) + '\t' + str(value) + '\n'
+    for key, value in sorted(tenants_instances.items(), key=lambda e: e[1],
+                             reverse=True):
+        msg += str(key) + '\t' + str(value) + '\n'
+    msg += '\n\n'
+    for key, value in sorted(flavor_count.items(), key=lambda e: e[1],
+                             reverse=True):
+        msg += str(key) + '\t' + str(value) + '\n'
 
     send_mail(subject="Memset Daily Report", msg=msg)
+
 
 if __name__ == '__main__':
     main()
