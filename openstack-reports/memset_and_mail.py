@@ -77,17 +77,25 @@ def get_data(config_file):
 
 
 def main():
+    project_name_dict = {
+        'tenant_name': 'long name'
+    }
     filename = os.path.basename(__file__).split('.')[0]
     config_file = '{0}.yaml'.format(filename)
     flavor_count, tenants_instances = get_data(config_file)
     msg = ''
     for key, value in sorted(tenants_instances.items(), key=lambda e: e[1],
                              reverse=True):
-        msg += str(key) + '\t' + str(value) + '\n'
+        if key in project_name_dict:
+            msg += '{:<16}{:<16}{:>16}\n'.format(str(key),
+                                                 project_name_dict[key], value)
+        else:
+            msg += '{:<16}{:<16}{:>16}\n'.format(str(key), 'All projects',
+                                                 value)
     msg += '\n\n'
     for key, value in sorted(flavor_count.items(), key=lambda e: e[1],
                              reverse=True):
-        msg += str(key) + '\t' + str(value) + '\n'
+        msg += '{:<16}{:>16}\n'.format(str(key), value)
 
     send_mail(subject="Memset Daily Report", msg=msg)
 
