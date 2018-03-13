@@ -6,13 +6,15 @@ import yaml
 import json
 import smtplib
 
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-def send_mail(subject, msg):
+
+def send_mail(msg):
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     server.login(source_email_address, source_email_address_password)
-    full_msg = 'Subject: {0}\n\n{1}'.format(subject, msg)
-    server.sendmail(source_email_address, destination_email_address, full_msg)
+    server.sendmail(source_email_address, destination_email_address, msg)
     server.quit()
 
 
@@ -76,28 +78,48 @@ def get_data(config_file):
     return flavor_count, tenants_instances
 
 
-def main():
+def build_msg(flavor_count, tenants_instances):
     project_name_dict = {
         'tenant_name': 'long name'
     }
+    email = MIMEMultipart('alternative')
+    email['From'] = source_email_address
+    email['To'] = destination_email_address
+    email['Subject'] = "Memset Daily Report"
+    html_msg = '<html><body>'
+    html_msg += '<table>'
+    html_msg += """
+    <th>Tenant Name</th>
+    <th>Custom Tenant Name</th>
+    <th>Number of instnaces</th>
+    """
+    for key, value in sorted(tenants_instances.items(), key=lambda e: e[1],
+                             reverse=True):
+        html_msg += '<tr>'
+        cells = ('<td>{}</td>' * 3)
+        if key in project_name_dict:
+
+            html_msg += cells.format(str(key), project_name_dict[key], value)
+        else:
+            html_msg += cells.format(str(key), '-', value)
+        html_msg += '</tr>'
+    html_msg += '</table><br><br>'
+    html_msg += '<table>'
+    for key, value in sorted(flavor_count.items(), key=lambda e: e[1],
+                             reverse=True):
+        html_msg += '{:<16}{:>16}\n'.format(str(key), value)
+    html_msg += '</table>'
+    html_msg += '</body></html>'
+    email.attach(MIMEText(html_msg, 'html'))
+
+    return email.as_string()
+
+
+def main():
     filename = os.path.basename(__file__).split('.')[0]
     config_file = '{0}.yaml'.format(filename)
     flavor_count, tenants_instances = get_data(config_file)
-    msg = ''
-    for key, value in sorted(tenants_instances.items(), key=lambda e: e[1],
-                             reverse=True):
-        if key in project_name_dict:
-            msg += '{:<16}{:<16}{:>16}\n'.format(str(key),
-                                                 project_name_dict[key], value)
-        else:
-            msg += '{:<16}{:<16}{:>16}\n'.format(str(key), 'All projects',
-                                                 value)
-    msg += '\n\n'
-    for key, value in sorted(flavor_count.items(), key=lambda e: e[1],
-                             reverse=True):
-        msg += '{:<16}{:>16}\n'.format(str(key), value)
-
-    send_mail(subject="Memset Daily Report", msg=msg)
+    send_mail(build_msg(flavor_count, tenants_instances))
 
 
 if __name__ == '__main__':
