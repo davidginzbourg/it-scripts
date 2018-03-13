@@ -86,17 +86,30 @@ def build_msg(flavor_count, tenants_instances):
     email['From'] = source_email_address
     email['To'] = destination_email_address
     email['Subject'] = "Memset Daily Report"
-    html_msg = '<html><body>'
-    html_msg += '<table>'
-    html_msg += """
+    html_msg = """
+    <html>
+    <head>
+    <style>
+    table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 5px;
+        text-align: center;
+    }
+    </style>
+    </head>
+    <body>
+    <table>
     <th>Tenant Name</th>
     <th>Custom Tenant Name</th>
     <th>Number of instnaces</th>
     """
+    cells = ('<td>{}</td>' * 3)
     for key, value in sorted(tenants_instances.items(), key=lambda e: e[1],
                              reverse=True):
         html_msg += '<tr>'
-        cells = ('<td>{}</td>' * 3)
         if key in project_name_dict:
 
             html_msg += cells.format(str(key), project_name_dict[key], value)
@@ -104,10 +117,18 @@ def build_msg(flavor_count, tenants_instances):
             html_msg += cells.format(str(key), '-', value)
         html_msg += '</tr>'
     html_msg += '</table><br><br>'
-    html_msg += '<table>'
+
+    html_msg += """
+    <table>
+    <th>Flavor Name</th>
+    <th>Number of instnaces with this flavor</th>
+    """
+    cells = ('<td>{}</td>' * 2)
     for key, value in sorted(flavor_count.items(), key=lambda e: e[1],
                              reverse=True):
-        html_msg += '{:<16}{:>16}\n'.format(str(key), value)
+        html_msg += '<tr>'
+        html_msg += cells.format(str(key), value)
+        html_msg += '</tr>'
     html_msg += '</table>'
     html_msg += '</body></html>'
     email.attach(MIMEText(html_msg, 'html'))
