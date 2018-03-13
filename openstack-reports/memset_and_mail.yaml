@@ -1,0 +1,39 @@
+ENV_VARS:
+  OS_AUTH_URL: 'https://auth.openstack.memset.com:5000/v3'
+  OS_USERNAME: 'username'
+  OS_PASSWORD: 'password'
+  OS_USER_DOMAIN_NAME: "Default"
+  OS_REGION_NAME: "reading-a"
+  OS_INTERFACE: "public"
+  OS_IDENTITY_API_VERSION: "3"
+destination_email_address: 'email address'
+source_email_address: 'email address'
+source_email_address_password: 'email address password'
+
+flavors:
+    MSOS001: 0
+    MSOS002: 0
+    MSOS004_2: 0
+    MSOS004_3: 0
+    MSOS004: 0
+    MSOS004_6: 0
+    MSOS008_3: 0
+    MSOS008_4: 0
+    MSOS008: 0
+    MSOS008_9: 0
+    MSOS016_4: 0
+    MSOS016_6: 0
+    MSOS016: 0
+    MSOS016_12: 0
+    MSOS032_6: 0
+    MSOS032_9: 0
+    MSOS032: 0
+    MSOS032_18: 0
+    MSOS064_8: 0
+    MSOS064_12: 0
+    MSOS064: 0
+    MSOS064_24: 0
+    MSOS128_12: 0
+    MSOS128_18: 0
+    MSOS128: 0
+    MSOS128_36: 0
