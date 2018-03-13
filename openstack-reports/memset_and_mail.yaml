@@ -8,7 +8,7 @@ ENV_VARS:
   OS_IDENTITY_API_VERSION: "3"
 destination_email_address: 'email address'
 source_email_address: 'email address'
-source_email_address_password: 'email address'
+source_email_address_password: 'email address password'
 
 flavors:
     MSOS001: 0
