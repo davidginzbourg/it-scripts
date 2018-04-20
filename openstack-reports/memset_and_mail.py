@@ -136,8 +136,7 @@ def build_msg(flavor_count, tenants_instances, source_email_address,
 
 
 def main():
-    filename = os.path.basename(__file__).split('.')[0]
-    config_file = '{0}.yaml'.format(filename)
+    config_file = 'CONFIG_PATH_HERE.yaml'
     tenants_instances, global_vars = get_data(config_file)
     send_mail(build_msg(tenants_instances=tenants_instances, **global_vars),
               **global_vars)

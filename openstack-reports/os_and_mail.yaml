@@ -60,4 +60,6 @@ rackspace:
         m1.xlarge: 0
         integration-tests: 0
 
-email_address_destination: '*@gigaspaces.com'
+destination_email_address: '*****'
+source_email_address: '****'
+source_email_address_password: '*****'
