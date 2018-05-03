@@ -399,11 +399,9 @@ def fetch_global_settings(spreadsheet_creds):
     gc = gspread.authorize(spreadsheet_creds)
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(SETTINGS_WORKSHEET)
     contents = sheet.get_all_records()
-    for key in contents.keys():
-        # It returns a list of values but in this case there's only one value.
-        # This just simplifies the TimeThresholdSettings instantiation.
-        contents[key] = contents[key][0]
-    return TimeThresholdSettings(**contents)
+    if not contents:
+        raise Exception("Settings worksheet is empty.")
+    return TimeThresholdSettings(**contents[0])
 
 
 def get_credentials(project):
