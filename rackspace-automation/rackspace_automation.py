@@ -21,7 +21,7 @@ class Verdict:
     DELETE, SHELVE, WARN_DELETE, WARN_SHELVE = range(4)
 
 
-class TimeLimitSettings:
+class TimeThresholdSettings:
     """Represents some configuration of the settings.
     """
 
@@ -146,9 +146,9 @@ def fetch_configuration(spreadsheet_creds):
     'instance_settings':
         'project_i':
             {
-                'instance_j': TimeLimitSettings
+                'instance_j': TimeThresholdSettings
             }
-    'settings': TimeLimitSettings
+    'settings': TimeThresholdSettings
     }
 
     :param spreadsheet_creds: Google Spreadsheet credentials.
