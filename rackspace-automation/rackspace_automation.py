@@ -18,7 +18,7 @@ SETTINGS = 'settings'
 class Verdict:
     """Enum class for states.
     """
-    DELETE, SHELVE, WARN_DELETE, WARN_SHELVE = range(4)
+    DELETE, SHELVE, DELETE_WARN, SHELVE_WARN, DO_NOTHING = range(5)
 
 
 class TimeThresholdSettings:
@@ -43,15 +43,85 @@ class TimeThresholdSettings:
         self.stop_threshold = stop_threshold
         self.shelve_threshold = shelve_threshold
 
+    def should_shelve_warn(self, inst_dec):
+        """Checks if it should it warn for shelving. This applies to
+        running/stopped instnaces.
+        :param inst_dec: instance decorator.
+         :type: InstanceDecorator.
+        :return: whether it should.
+        """
 
-def get_verdict(project_name, instance, configuration):
+    pass
+
+    def should_delete_warn(self, inst_dec):
+        """Checks if it should it warn before deleting. This applies to shelved
+         instances.
+        :param inst_dec: instance decorator.
+         :type: InstanceDecorator.
+        :return: whether it should.
+        """
+        pass
+
+    def should_shelve(self, inst_dec):
+        """Checks if it should it shelve the instance. Applies to
+        running/stopped instances.
+        :param inst_dec: instance decorator.
+         :type: InstanceDecorator.
+        :return: whether it should.
+        """
+        pass
+
+    def should_delete(self, inst_dec):
+        """Checks if it should delete the instance. Applies to shelved
+        instances.
+        :param inst_dec: instance decorator.
+         :type: InstanceDecorator.
+        :return: whether it should.
+        """
+        pass
+
+
+class InstanceDecorator:
+    """A decorator for the novaclient instances.
+    """
+
+    def __init__(self, instance):
+        """Initializer.
+
+        :param instance: novaclient server instance.
+        """
+        self.instance = instance
+
+    @property
+    def name(self):
+        return self.instance.human_id
+
+
+def get_verdict(project_name, inst_dec, configuration):
     """
     :param project_name: project the instance belongs to.
-    :param instance: instance to check.
+    :param inst_dec: instance decorator to check.
+    :type: InstanceDecorator
     :param configuration: program configuration.
     :return: which state to assign instance.
     """
+    instance_settings = configuration[SETTINGS]  # Default
+
     if project_name in configuration[INSTANCE_SETTINGS]:
+        if inst_dec.name in configuration[INSTANCE_SETTINGS][project_name]:
+            instance_settings = \
+                configuration[INSTANCE_SETTINGS][project_name][inst_dec.name]
+
+    if instance_settings.should_shelve_warn(inst_dec):
+        return Verdict.SHELVE_WARN
+    if instance_settings.should_delete_warn(inst_dec):
+        return Verdict.DELETE_WARN
+    if instance_settings.should_shelve(inst_dec):
+        return Verdict.SHELVE
+    if instance_settings.should_delete(inst_dec):
+        return Verdict.DELETE
+    return Verdict.DO_NOTHING
+
 
 
 def is_above_threshold(time, threshold):
@@ -120,8 +190,9 @@ def get_violating_instances(project_names, configuration):
         instances_list = nova.servers.list()
 
         for instance in instances_list:
+            inst_dec = InstanceDecorator(instance)
             add_instance_to_dicts(
-                get_verdict(project, instance, configuration))
+                get_verdict(project, inst_dec, configuration))
 
         return {'shelve_instances': shelve_instances,
                 'delete_shelved_instances': delete_shelved_instances,
