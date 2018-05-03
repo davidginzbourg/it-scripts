@@ -347,19 +347,19 @@ def fetch_instance_settings(spreadsheet_creds):
             return float('inf')
         return float(value)
 
-    def get_time_threshold_settings_params(project_i):
+    def get_time_threshold_settings_params(row_dict):
         shelve_running_warning_threshold = \
-            parse_value(contents[SHELVE_RUNNING_WARNING_THRESHOLD][project_i])
+            parse_value(row_dict[SHELVE_RUNNING_WARNING_THRESHOLD])
         shelve_stopped_warning_threshold = \
-            parse_value(contents[SHELVE_STOPPED_WARNING_THRESHOLD][project_i])
+            parse_value(row_dict[SHELVE_STOPPED_WARNING_THRESHOLD])
         delete_warning_threshold = \
-            parse_value(contents[DELETE_WARNING_THRESHOLD][project_i])
+            parse_value(row_dict[DELETE_WARNING_THRESHOLD])
         shelve_running_threshold = \
-            parse_value(contents[SHELVE_RUNNING_THRESHOLD][project_i])
+            parse_value(row_dict[SHELVE_RUNNING_THRESHOLD])
         shelve_stopped_threshold = \
-            parse_value(contents[SHELVE_STOPPED_THRESHOLD][project_i])
+            parse_value(row_dict[SHELVE_STOPPED_THRESHOLD])
         delete_shelved_threshold = \
-            parse_value(contents[DELETE_SHELVED_THRESHOLD][project_i])
+            parse_value(row_dict[DELETE_SHELVED_THRESHOLD])
         return {
             'shelve_running_warning_threshold':
                 shelve_running_warning_threshold,
@@ -375,14 +375,16 @@ def fetch_instance_settings(spreadsheet_creds):
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(
         INSTANCE_SETTINGS_WORKSHEET)
     contents = sheet.get_all_records()
-    for project_i in range(contents[PROJECT_NAME]):
-        project_name = contents[PROJECT_NAME][project_i]
+    if not contents:
+        return {}
+    for row_dict in contents:
+        project_name = row_dict[PROJECT_NAME]
         if project_name:
             append_to_key_dict_dict(project_name,
-                                    contents[INSTANCE_NAME][project_i],
+                                    row_dict[INSTANCE_NAME],
                                     TimeThresholdSettings(
                                         **get_time_threshold_settings_params(
-                                            project_i))
+                                            row_dict))
                                     )
     return instance_settings
 
