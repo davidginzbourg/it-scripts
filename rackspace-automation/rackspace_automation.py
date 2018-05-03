@@ -47,17 +47,16 @@ class TimeThresholdSettings:
         """Checks if it should it warn for shelving. This applies to
         running/stopped instnaces.
         :param inst_dec: instance decorator.
-         :type: InstanceDecorator.
+        :type: InstanceDecorator.
         :return: whether it should.
         """
-
-    pass
+        pass
 
     def should_delete_warn(self, inst_dec):
         """Checks if it should it warn before deleting. This applies to shelved
          instances.
         :param inst_dec: instance decorator.
-         :type: InstanceDecorator.
+        :type: InstanceDecorator.
         :return: whether it should.
         """
         pass
@@ -66,7 +65,7 @@ class TimeThresholdSettings:
         """Checks if it should it shelve the instance. Applies to
         running/stopped instances.
         :param inst_dec: instance decorator.
-         :type: InstanceDecorator.
+        :type: InstanceDecorator.
         :return: whether it should.
         """
         pass
@@ -75,10 +74,23 @@ class TimeThresholdSettings:
         """Checks if it should delete the instance. Applies to shelved
         instances.
         :param inst_dec: instance decorator.
-         :type: InstanceDecorator.
+        :type: InstanceDecorator.
         :return: whether it should.
         """
         pass
+
+    @staticmethod
+    def is_above_threshold(time, threshold):
+        """Calculates the time difference between now and the given time and
+        checks it against the threshold.
+        :param time: time to check.
+        :param threshold: threshold.
+        :return: whether more time has passed since 'time' than the threshold.
+        """
+        updated_at = dateutil.parser.parse(time).replace(tzinfo=None)
+        expiration_threshold = datetime.datetime.utcnow() - \
+                               datetime.timedelta(days=threshold)
+        return updated_at - expiration_threshold <= datetime.timedelta(0)
 
 
 class InstanceDecorator:
@@ -100,8 +112,8 @@ class InstanceDecorator:
 def get_verdict(project_name, inst_dec, configuration):
     """
     :param project_name: project the instance belongs to.
-    :param inst_dec: instance decorator to check.
-    :type: InstanceDecorator
+    :param inst_dec: instance decorator.
+    :type: InstanceDecorator.
     :param configuration: program configuration.
     :return: which state to assign instance.
     """
@@ -123,19 +135,6 @@ def get_verdict(project_name, inst_dec, configuration):
     return Verdict.DO_NOTHING
 
 
-
-def is_above_threshold(time, threshold):
-    """
-    :param time: time to check.
-    :param threshold: threshold.
-    :return: whether more time has passed since 'time' than the threshold.
-    """
-    updated_at = dateutil.parser.parse(time).replace(tzinfo=None)
-    expiration_threshold = datetime.datetime.utcnow() - \
-                           datetime.timedelta(days=threshold)
-    return updated_at - expiration_threshold <= datetime.timedelta(0)
-
-
 def send_warnings(shelve_warnings, delete_warnings, **kwargs):
     """Sends out a warning regarding the given instances.
 
@@ -148,20 +147,20 @@ def send_warnings(shelve_warnings, delete_warnings, **kwargs):
     print('Delete warnings: {}'.format(delete_warnings))
 
 
-def delete_instances(delete_shelved, **kwargs):
+def delete_instances(instances_to_delete, **kwargs):
     """Delete the shelved instances.
 
-    :param delete_shelved: instances to delete.
+    :param instances_to_delete: instances to delete.
     """
-    print('DELETE: {}'.format(delete_shelved))
+    print('DELETE: {}'.format(instances_to_delete))
 
 
-def shelve(shelve_instances, **kwargs):
+def shelve(instances_to_shelve, **kwargs):
     """Shelve the instances.
 
-    :param shelve_instances: instances to shelve.
+    :param instances_to_shelve: instances to shelve.
     """
-    print('SHELVE: {}'.format(shelve_instances))
+    print('SHELVE: {}'.format(instances_to_shelve))
 
 
 def get_violating_instances(project_names, configuration):
@@ -169,19 +168,39 @@ def get_violating_instances(project_names, configuration):
 
     :param project_names: all the tenant names.
     :param configuration: program configuration.
-    :return: shelve_instances, delete_shelved_instances, shelve_warnings,
+    :return: instances_to_shelve, instances_to_delete, shelve_warnings,
         delete_warnings.
     """
 
-    def add_instance_to_dicts(verdict):
+    def add_to_dict(project, inst_dec, dest_dict):
+        """Appends the instance decorator to the project list.
+
+        :param project: project to append to it's list.
+        :param inst_dec: instance decorator.
+        :param dest_dict: dictionary to add to.
+        :type: InstanceDecorator.
+        """
+        if project not in dest_dict:
+            dest_dict[project] = list([inst_dec])
+
+    def add_instance_to_dicts(project, inst_dec, verdict):
         """Adds the instance to the corresponding dict.
+        :param project: project name.
+        :param inst_dec: instance decorator.
+        :type: InstanceDecorator.
         :param verdict: verdict to follow.
         """
-        # is_above_threshold(instance.updated, SHELVE_THRESHOLD)
-        pass
+        if verdict == Verdict.DELETE:
+            add_to_dict(project, inst_dec, instances_to_delete)
+        if verdict == Verdict.SHELVE:
+            add_to_dict(project, inst_dec, instances_to_shelve)
+        if verdict == Verdict.DELETE_WARN:
+            add_to_dict(project, inst_dec, delete_warnings)
+        if verdict == Verdict.SHELVE_WARN:
+            add_to_dict(project, inst_dec, shelve_warnings)
 
-    shelve_instances = {}
-    delete_shelved_instances = {}
+    instances_to_shelve = {}
+    instances_to_delete = {}
     shelve_warnings = {}
     delete_warnings = {}
     for project in project_names:
@@ -191,11 +210,13 @@ def get_violating_instances(project_names, configuration):
 
         for instance in instances_list:
             inst_dec = InstanceDecorator(instance)
-            add_instance_to_dicts(
-                get_verdict(project, inst_dec, configuration))
+            verdict = get_verdict(project, inst_dec,
+                                  configuration)
+            if verdict != Verdict.DO_NOTHING:
+                add_instance_to_dicts(project, inst_dec, verdict)
 
-        return {'shelve_instances': shelve_instances,
-                'delete_shelved_instances': delete_shelved_instances,
+        return {'instances_to_shelve': instances_to_shelve,
+                'instances_to_delete': instances_to_delete,
                 'shelve_warnings': shelve_warnings,
                 'delete_warnings': delete_warnings}
 
