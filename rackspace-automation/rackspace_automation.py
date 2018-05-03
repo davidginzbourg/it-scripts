@@ -3,16 +3,46 @@ import datetime
 import dateutil.parser
 
 import boto3
+import gspread
 from keystoneauth1 import session
-
 from keystoneauth1.identity import v3
 from novaclient import client as novaclient
 from keystoneclient.v3 import client as keystoneclient
+from oauth2client.service_account import ServiceAccountCredentials
 
 sns_client = boto3.client('sns')
 
 INSTANCE_SETTINGS = 'instance_settings'
-SETTINGS = 'settings'
+GLOBAL_SETTINGS = 'settings'
+PROJECT_NAME = 'project_name'
+INSTANCE_NAME = 'instance_name'
+SHELVE_RUNNING_WARNING_THRESHOLD = 'shelve_running_warning_threshold'
+SHELVE_RUNNING_THRESHOLD = 'shelve_running_threshold'
+SHELVE_STOPPED_WARNING_THRESHOLD = 'shelve_stopped_warning_threshold'
+SHELVE_STOPPED_THRESHOLD = 'shelve_stopped_threshold'
+DELETE_WARNING_THRESHOLD = 'delete_warning_threshold'
+DELETE_SHELVED_THRESHOLD = 'delete_shelved_threshold'
+
+SCOPES = ['https://spreadsheets.google.com/feeds']
+CREDENTIALS_FILE_PATH = os.environ.get('CREDENTIALS_FILE_PATH')
+if not CREDENTIALS_FILE_PATH:
+    raise Exception('Missing CREDENTIALS_FILE_PATH env var')
+
+SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
+if not SPREADSHEET_ID:
+    raise Exception('Missing SPREADSHEET_ID env var')
+
+SETTINGS_WORKSHEET = os.environ.get('SETTINGS_WORKSHEET')
+if not SETTINGS_WORKSHEET:
+    raise Exception('Missing SETTINGS_WORKSHEET env var')
+
+INSTANCE_SETTINGS_WORKSHEET = os.environ.get('INSTANCE_SETTINGS_WORKSHEET')
+if INSTANCE_SETTINGS_WORKSHEET:
+    raise Exception('Missing INSTANCE_SETTINGS_WORKSHEET env var')
+
+OPENSTACK_MAIN_PROJECT = os.environ['OPENSTACK_MAIN_PROJECT']
+if not OPENSTACK_MAIN_PROJECT:
+    raise Exception('Missing OPENSTACK_MAIN_PROJECT env var')
 
 
 class Verdict:
@@ -146,20 +176,20 @@ def get_verdict(project_name, inst_dec, configuration):
     :param configuration: program configuration.
     :return: which state to assign instance.
     """
-    instance_settings = configuration[SETTINGS]  # Default
+    threshold_settings = configuration[GLOBAL_SETTINGS]  # Default
 
     if project_name in configuration[INSTANCE_SETTINGS]:
         if inst_dec.name in configuration[INSTANCE_SETTINGS][project_name]:
-            instance_settings = \
+            threshold_settings = \
                 configuration[INSTANCE_SETTINGS][project_name][inst_dec.name]
 
-    if instance_settings.should_shelve_warn(inst_dec):
+    if threshold_settings.should_shelve_warn(inst_dec):
         return Verdict.SHELVE_WARN
-    if instance_settings.should_delete_warn(inst_dec):
+    if threshold_settings.should_delete_warn(inst_dec):
         return Verdict.DELETE_WARN
-    if instance_settings.should_shelve(inst_dec):
+    if threshold_settings.should_shelve(inst_dec):
         return Verdict.SHELVE
-    if instance_settings.should_delete(inst_dec):
+    if threshold_settings.should_delete(inst_dec):
         return Verdict.DELETE
     return Verdict.DO_NOTHING
 
@@ -211,12 +241,14 @@ def get_violating_instances(project_names, configuration):
         """
         if project not in dest_dict:
             dest_dict[project] = list([inst_dec])
+        else:
+            dest_dict[project].append(inst_dec)
 
     def add_instance_to_dicts(project, inst_dec, verdict):
         """Adds the instance to the corresponding dict.
         :param project: project name.
         :param inst_dec: instance decorator.
-        :type: InstanceDecorator.
+        :type inst_dec: InstanceDecorator.
         :param verdict: verdict to follow.
         """
         if verdict == Verdict.DELETE:
@@ -284,7 +316,92 @@ def fetch_configuration(spreadsheet_creds):
     :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: the program settings.
     """
-    return {}
+    return {INSTANCE_SETTINGS: fetch_instance_settings(spreadsheet_creds),
+            GLOBAL_SETTINGS: fetch_global_settings(spreadsheet_creds)}
+
+
+def fetch_instance_settings(spreadsheet_creds):
+    """Returns the instance settings.
+
+    :param spreadsheet_creds:
+    :return: the instance settings as a dict:
+    {
+        'project_i':
+            {
+                'instance_j': TimeThresholdSettings
+            }
+    }
+    """
+
+    def append_to_key_dict_dict(project_name, instance_name,
+                                time_threshold_settings):
+        if project_name not in instance_settings:
+            instance_settings[project_name] = {instance_name:
+                                                   time_threshold_settings}
+        else:
+            instance_settings[project_name][instance_name] = \
+                time_threshold_settings
+
+    def parse_value(value):
+        if not value:
+            return float('inf')
+        return float(value)
+
+    def get_time_threshold_settings_params(project_i):
+        shelve_running_warning_threshold = \
+            parse_value(contents[SHELVE_RUNNING_WARNING_THRESHOLD][project_i])
+        shelve_stopped_warning_threshold = \
+            parse_value(contents[SHELVE_STOPPED_WARNING_THRESHOLD][project_i])
+        delete_warning_threshold = \
+            parse_value(contents[DELETE_WARNING_THRESHOLD][project_i])
+        shelve_running_threshold = \
+            parse_value(contents[SHELVE_RUNNING_THRESHOLD][project_i])
+        shelve_stopped_threshold = \
+            parse_value(contents[SHELVE_STOPPED_THRESHOLD][project_i])
+        delete_shelved_threshold = \
+            parse_value(contents[DELETE_SHELVED_THRESHOLD][project_i])
+        return {
+            'shelve_running_warning_threshold':
+                shelve_running_warning_threshold,
+            'shelve_stopped_warning_threshold':
+                shelve_stopped_warning_threshold,
+            'delete_warning_threshold': delete_warning_threshold,
+            'shelve_running_threshold': shelve_running_threshold,
+            'shelve_stopped_threshold': shelve_stopped_threshold,
+            'delete_shelved_threshold': delete_shelved_threshold}
+
+    instance_settings = {}
+    gc = gspread.authorize(spreadsheet_creds)
+    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(
+        INSTANCE_SETTINGS_WORKSHEET)
+    contents = sheet.get_all_records()
+    for project_i in range(contents[PROJECT_NAME]):
+        project_name = contents[PROJECT_NAME][project_i]
+        if project_name:
+            append_to_key_dict_dict(project_name,
+                                    contents[INSTANCE_NAME][project_i],
+                                    TimeThresholdSettings(
+                                        **get_time_threshold_settings_params(
+                                            project_i))
+                                    )
+    return instance_settings
+
+
+def fetch_global_settings(spreadsheet_creds):
+    """Returns the global settings from the Spreadsheet.
+
+    :param spreadsheet_creds:
+    :return: global settings of the program.
+    :rtype: TimeThresholdSettings
+    """
+    gc = gspread.authorize(spreadsheet_creds)
+    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(SETTINGS_WORKSHEET)
+    contents = sheet.get_all_records()
+    for key in contents.keys():
+        # It returns a list of values but in this case there's only one value.
+        # This just simplifies the TimeThresholdSettings instantiation.
+        contents[key] = contents[key][0]
+    return TimeThresholdSettings(**contents)
 
 
 def get_credentials(project):
@@ -305,23 +422,16 @@ def get_credentials(project):
     return session.Session(auth=auth)
 
 
-def check_environs():
-    """Checks if all the environs are setup.
-    """
-    pass
-
-
 def get_spreadsheet_creds():
     """
     :return: Google Spreadsheet credentials.
     """
-    pass
+    return ServiceAccountCredentials.from_json_keyfile_name(
+        CREDENTIALS_FILE_PATH, scopes=SCOPES)
 
 
 def main():
-    check_environs()
-    main_proj_creds = get_credentials(
-        os.environ['OPENSTACK_MAIN_PROJECT'])
+    main_proj_creds = get_credentials(OPENSTACK_MAIN_PROJECT)
     spreadsheet_credentials = get_spreadsheet_creds()
     configuration = fetch_configuration(spreadsheet_credentials)
     project_names = get_tenant_names(main_proj_creds)
