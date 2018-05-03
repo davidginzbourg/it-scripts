@@ -11,8 +11,8 @@ from keystoneclient.v3 import client as keystoneclient
 
 sns_client = boto3.client('sns')
 
-SHELVE_THRESHOLD = 11  # Days
-SHELVE_WARN_THRESHOLD = 9  # Days
+INSTANCE_SETTINGS = 'instance_settings'
+SETTINGS = 'settings'
 
 
 class Verdict:
@@ -25,13 +25,20 @@ class TimeThresholdSettings:
     """Represents some configuration of the settings.
     """
 
-    def __init__(self, running_threshold, stop_threshold, shelve_threshold):
+    def __init__(self, shelve_warning_threshold, delete_warning_threshold,
+                 running_threshold, stop_threshold, shelve_threshold):
         """Initializes a new configuration.
 
+        :param shelve_warning_threshold: a warning threshold for shelving
+            (seconds).
+        :param delete_warning_threshold: a warning threshold for deletion
+            (seconds).
         :param running_threshold: running time threshold (seconds).
         :param stop_threshold: stop time threshold (seconds).
         :param shelve_threshold: shelve time threshold (seconds).
         """
+        self.shelve_warning_threshold = shelve_warning_threshold
+        self.delete_warning_threshold = delete_warning_threshold
         self.running_threshold = running_threshold
         self.stop_threshold = stop_threshold
         self.shelve_threshold = shelve_threshold
@@ -44,7 +51,7 @@ def get_verdict(project_name, instance, configuration):
     :param configuration: program configuration.
     :return: which state to assign instance.
     """
-    pass
+    if project_name in configuration[INSTANCE_SETTINGS]:
 
 
 def is_above_threshold(time, threshold):
@@ -144,10 +151,12 @@ def fetch_configuration(spreadsheet_creds):
 
     {
     'instance_settings':
-        'project_i':
-            {
-                'instance_j': TimeThresholdSettings
-            }
+        {
+            'project_i':
+                {
+                    'instance_j': TimeThresholdSettings
+                }
+        }
     'settings': TimeThresholdSettings
     }
 
