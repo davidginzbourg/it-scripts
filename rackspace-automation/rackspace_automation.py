@@ -21,6 +21,22 @@ class Verdict:
     DELETE, SHELVE, WARN_DELETE, WARN_SHELVE = range(4)
 
 
+class TimeLimitSettings:
+    """Represents some configuration of the settings.
+    """
+
+    def __init__(self, running_threshold, stop_threshold, shelve_threshold):
+        """Initializes a new configuration.
+
+        :param running_threshold: running time threshold (seconds).
+        :param stop_threshold: stop time threshold (seconds).
+        :param shelve_threshold: shelve time threshold (seconds).
+        """
+        self.running_threshold = running_threshold
+        self.stop_threshold = stop_threshold
+        self.shelve_threshold = shelve_threshold
+
+
 def get_verdict(project_name, instance, configuration):
     """
     :param project_name: project the instance belongs to.
@@ -123,8 +139,17 @@ def get_tenant_names(credentials):
     return projects_name
 
 
-def fetch_ignore_dict(spreadsheet_creds):
+def fetch_configuration(spreadsheet_creds):
     """Fetch the program settings from a Google Spreadsheet.
+
+    {
+    'instance_settings':
+        'project_i':
+            {
+                'instance_j': TimeLimitSettings
+            }
+    'settings': TimeLimitSettings
+    }
 
     :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: the program settings.
@@ -168,7 +193,7 @@ def main():
     main_proj_creds = get_credentials(
         os.environ['OPENSTACK_MAIN_PROJECT'])
     spreadsheet_credentials = get_spreadsheet_creds()
-    configuration = fetch_ignore_dict(spreadsheet_credentials)
+    configuration = fetch_configuration(spreadsheet_credentials)
     project_names = get_tenant_names(main_proj_creds)
     violating_instances = get_violating_instances(project_names, configuration)
     shelve(**violating_instances)
