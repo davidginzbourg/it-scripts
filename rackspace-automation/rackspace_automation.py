@@ -9,7 +9,6 @@ from keystoneauth1.identity import v3
 from novaclient import client as novaclient
 from keystoneclient.v3 import client as keystoneclient
 
-s3_client = boto3.client('s3')
 sns_client = boto3.client('sns')
 
 SHELVE_THRESHOLD = 11  # Days
@@ -22,9 +21,11 @@ class Verdict:
     DELETE, SHELVE, WARN_DELETE, WARN_SHELVE = range(4)
 
 
-def get_verdict(instance):
+def get_verdict(project_name, instance, configuration):
     """
+    :param project_name: project the instance belongs to.
     :param instance: instance to check.
+    :param configuration: program configuration.
     :return: which state to assign instance.
     """
     pass
@@ -42,7 +43,7 @@ def is_above_threshold(time, threshold):
     return updated_at - expiration_threshold <= datetime.timedelta(0)
 
 
-def send_warnings(shelve_warnings, delete_warnings):
+def send_warnings(shelve_warnings, delete_warnings, **kwargs):
     """Sends out a warning regarding the given instances.
 
     :param shelve_warnings: instances that their owners should be warned before
@@ -54,7 +55,7 @@ def send_warnings(shelve_warnings, delete_warnings):
     print('Delete warnings: {}'.format(delete_warnings))
 
 
-def delete_instances(delete_shelved):
+def delete_instances(delete_shelved, **kwargs):
     """Delete the shelved instances.
 
     :param delete_shelved: instances to delete.
@@ -62,7 +63,7 @@ def delete_instances(delete_shelved):
     print('DELETE: {}'.format(delete_shelved))
 
 
-def shelve(shelve_instances):
+def shelve(shelve_instances, **kwargs):
     """Shelve the instances.
 
     :param shelve_instances: instances to shelve.
@@ -70,11 +71,11 @@ def shelve(shelve_instances):
     print('SHELVE: {}'.format(shelve_instances))
 
 
-def get_violating_instances(tenant_names, ignore_dict):
+def get_violating_instances(project_names, configuration):
     """Retrieve instances that violate violations.
 
-    :param tenant_names: all the tenant names.
-    :param ignore_dict: instances to ignore (tenant -> instance_name).
+    :param project_names: all the tenant names.
+    :param configuration: program configuration.
     :return: shelve_instances, delete_shelved_instances, shelve_warnings,
         delete_warnings.
     """
@@ -90,16 +91,19 @@ def get_violating_instances(tenant_names, ignore_dict):
     delete_shelved_instances = {}
     shelve_warnings = {}
     delete_warnings = {}
-    for project in tenant_names:
+    for project in project_names:
         credentials = get_credentials(project)
         nova = novaclient.Client(version='2.0', session=credentials)
         instances_list = nova.servers.list()
 
         for instance in instances_list:
-            add_instance_to_dicts(get_verdict(instance))
+            add_instance_to_dicts(
+                get_verdict(project, instance, configuration))
 
-        return shelve_instances, delete_shelved_instances, shelve_warnings, \
-               delete_warnings
+        return {'shelve_instances': shelve_instances,
+                'delete_shelved_instances': delete_shelved_instances,
+                'shelve_warnings': shelve_warnings,
+                'delete_warnings': delete_warnings}
 
 
 def get_tenant_names(credentials):
@@ -119,11 +123,11 @@ def get_tenant_names(credentials):
     return projects_name
 
 
-def fetch_ignore_dict(s3_client):
-    """Get the ignore dict (JSON file) from S3.
+def fetch_ignore_dict(spreadsheet_creds):
+    """Fetch the program settings from a Google Spreadsheet.
 
-    :param s3_client: S3 client.
-    :return: the python dict version of the JSON file.
+    :param spreadsheet_creds: Google Spreadsheet credentials.
+    :return: the program settings.
     """
     return {}
 
@@ -152,17 +156,24 @@ def check_environs():
     pass
 
 
+def get_spreadsheet_creds():
+    """
+    :return: Google Spreadsheet credentials.
+    """
+    pass
+
+
 def main():
     check_environs()
-    main_credentials = get_credentials(
+    main_proj_creds = get_credentials(
         os.environ['OPENSTACK_MAIN_PROJECT'])
-    ignore_dict = fetch_ignore_dict(s3_client)
-    tenant_names = get_tenant_names(main_credentials)
-    shelve_instances, delete_shelved_instances, shelve_warnings, \
-    delete_warnings = get_violating_instances(tenant_names, ignore_dict)
-    shelve(shelve_instances)
-    delete_instances(delete_shelved_instances)
-    send_warnings(shelve_warnings, delete_warnings)
+    spreadsheet_credentials = get_spreadsheet_creds()
+    configuration = fetch_ignore_dict(spreadsheet_credentials)
+    project_names = get_tenant_names(main_proj_creds)
+    violating_instances = get_violating_instances(project_names, configuration)
+    shelve(**violating_instances)
+    delete_instances(**violating_instances)
+    send_warnings(**violating_instances)
 
 
 if __name__ == '__main__':
