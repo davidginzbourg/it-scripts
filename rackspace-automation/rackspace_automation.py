@@ -431,9 +431,9 @@ def get_spreadsheet_creds():
 
 
 def main():
-    main_proj_creds = get_credentials(OPENSTACK_MAIN_PROJECT)
     spreadsheet_credentials = get_spreadsheet_creds()
     configuration = fetch_configuration(spreadsheet_credentials)
+    main_proj_creds = get_credentials(OPENSTACK_MAIN_PROJECT)
     project_names = get_tenant_names(main_proj_creds)
     violating_instances = get_violating_instances(project_names, configuration)
     shelve(**violating_instances)
