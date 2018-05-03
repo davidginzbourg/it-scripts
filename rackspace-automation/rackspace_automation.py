@@ -25,32 +25,43 @@ class TimeThresholdSettings:
     """Represents some configuration of the settings.
     """
 
-    def __init__(self, shelve_warning_threshold, delete_warning_threshold,
-                 running_threshold, stop_threshold, shelve_threshold):
+    def __init__(self, shelve_running_warning_threshold,
+                 shelve_stopped_warning_threshold, delete_warning_threshold,
+                 shelve_running_threshold, shelve_stopped_threshold,
+                 delete_shelved_threshold):
         """Initializes a new configuration.
 
-        :param shelve_warning_threshold: a warning threshold for shelving
-            (seconds).
+        :param shelve_running_warning_threshold: a warning threshold for
+            shelving a running instance (seconds).
+        :param shelve_stopped_warning_threshold: a warning threshold for
+            shelving a stopped instance (seconds).
         :param delete_warning_threshold: a warning threshold for deletion
             (seconds).
-        :param running_threshold: running time threshold (seconds).
-        :param stop_threshold: stop time threshold (seconds).
-        :param shelve_threshold: shelve time threshold (seconds).
+        :param shelve_running_threshold: running time threshold (seconds).
+        :param shelve_stopped_threshold: stopped time threshold (seconds).
+        :param delete_shelved_threshold: shelved time threshold (seconds).
         """
-        self.shelve_warning_threshold = shelve_warning_threshold
+        self.shelve_running_warning_threshold = \
+            shelve_running_warning_threshold
+        self.shelve_stopped_warning_threshold = \
+            shelve_stopped_warning_threshold
         self.delete_warning_threshold = delete_warning_threshold
-        self.running_threshold = running_threshold
-        self.stop_threshold = stop_threshold
-        self.shelve_threshold = shelve_threshold
+        self.shelve_running_threshold = shelve_running_threshold
+        self.shelve_stopped_threshold = shelve_stopped_threshold
+        self.delete_shelved_threshold = delete_shelved_threshold
 
     def should_shelve_warn(self, inst_dec):
         """Checks if it should it warn for shelving. This applies to
-        running/stopped instnaces.
+        running/stopped instances.
         :param inst_dec: instance decorator.
         :type: InstanceDecorator.
         :return: whether it should.
         """
-        pass
+        return \
+            self.is_above_threshold(inst_dec.running_since,
+                                    self.shelve_running_warning_threshold) or \
+            self.is_above_threshold(inst_dec.stopped_since,
+                                    self.shelve_stopped_warning_threshold)
 
     def should_delete_warn(self, inst_dec):
         """Checks if it should it warn before deleting. This applies to shelved
@@ -59,7 +70,8 @@ class TimeThresholdSettings:
         :type: InstanceDecorator.
         :return: whether it should.
         """
-        pass
+        return self.is_above_threshold(inst_dec.shelved_since,
+                                       self.delete_warning_threshold)
 
     def should_shelve(self, inst_dec):
         """Checks if it should it shelve the instance. Applies to
@@ -68,7 +80,11 @@ class TimeThresholdSettings:
         :type: InstanceDecorator.
         :return: whether it should.
         """
-        pass
+        return \
+            self.is_above_threshold(inst_dec.running_since,
+                                    self.shelve_running_threshold) or \
+            self.is_above_threshold(inst_dec.stopped_since,
+                                    self.shelve_stopped_threshold)
 
     def should_delete(self, inst_dec):
         """Checks if it should delete the instance. Applies to shelved
@@ -77,7 +93,8 @@ class TimeThresholdSettings:
         :type: InstanceDecorator.
         :return: whether it should.
         """
-        pass
+        return self.is_above_threshold(inst_dec.shelved_since,
+                                       self.delete_shelved_threshold)
 
     @staticmethod
     def is_above_threshold(time, threshold):
@@ -107,6 +124,18 @@ class InstanceDecorator:
     @property
     def name(self):
         return self.instance.human_id
+
+    @property
+    def running_since(self):
+        pass
+
+    @property
+    def stopped_since(self):
+        pass
+
+    @property
+    def shelved_since(self):
+        pass
 
 
 def get_verdict(project_name, inst_dec, configuration):
