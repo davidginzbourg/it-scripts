@@ -40,9 +40,21 @@ INSTANCE_SETTINGS_WORKSHEET = os.environ.get('INSTANCE_SETTINGS_WORKSHEET')
 if not INSTANCE_SETTINGS_WORKSHEET:
     raise Exception('Missing INSTANCE_SETTINGS_WORKSHEET env var')
 
-OPENSTACK_MAIN_PROJECT = os.environ['OPENSTACK_MAIN_PROJECT']
+OPENSTACK_MAIN_PROJECT = os.environ.get('OPENSTACK_MAIN_PROJECT')
 if not OPENSTACK_MAIN_PROJECT:
     raise Exception('Missing OPENSTACK_MAIN_PROJECT env var')
+
+OPENSTACK_URL = os.environ.get('OPENSTACK_URL')
+if not OPENSTACK_URL:
+    raise Exception('Missing OPENSTACK_URL env var')
+
+OPENSTACK_USERNAME = os.environ.get('OPENSTACK_USERNAME')
+if not OPENSTACK_USERNAME:
+    raise Exception('Missing OPENSTACK_USERNAME env var')
+
+OPENSTACK_PASSWORD = os.environ.get('OPENSTACK_PASSWORD')
+if not OPENSTACK_PASSWORD:
+    raise Exception('Missing OPENSTACK_PASSWORD env var')
 
 
 class StateTransition:
@@ -254,6 +266,7 @@ def get_verdict(project_name, inst_dec, configuration):
         return Verdict.DELETE
     return Verdict.DO_NOTHING
 
+
 def get_violating_instances(project_names, configuration):
     """Retrieve instances that violate violations.
 
@@ -442,9 +455,9 @@ def get_credentials(project):
     :param project: project to connect to.
     :return: keystoneclient.v3.Password instance.
     """
-    url = os.environ['OPENSTACK_URL']
-    username = os.environ['OPENSTACK_USERNAME']
-    password = os.environ['OPENSTACK_PASSWORD']
+    url = OPENSTACK_URL
+    username = OPENSTACK_USERNAME
+    password = OPENSTACK_PASSWORD
     auth = v3.Password(auth_url=url,
                        username=username,
                        password=password,
@@ -488,6 +501,7 @@ def shelve(instances_to_shelve, **kwargs):
     :param instances_to_shelve: instances to shelve.
     """
     print('SHELVE: {}'.format(instances_to_shelve))
+
 
 def main():
     spreadsheet_credentials = get_spreadsheet_creds()
