@@ -88,9 +88,9 @@ class TimeThresholdSettings:
         :return: whether it should.
         """
         return \
-            self.is_above_threshold(inst_dec.running_since,
+            self.is_above_threshold(inst_dec.running_since(),
                                     self.shelve_running_warning_threshold) or \
-            self.is_above_threshold(inst_dec.stopped_since,
+            self.is_above_threshold(inst_dec.stopped_since(),
                                     self.shelve_stopped_warning_threshold)
 
     def should_delete_warn(self, inst_dec):
@@ -100,7 +100,7 @@ class TimeThresholdSettings:
         :type: InstanceDecorator.
         :return: whether it should.
         """
-        return self.is_above_threshold(inst_dec.shelved_since,
+        return self.is_above_threshold(inst_dec.shelved_since(),
                                        self.delete_warning_threshold)
 
     def should_shelve(self, inst_dec):
@@ -111,9 +111,9 @@ class TimeThresholdSettings:
         :return: whether it should.
         """
         return \
-            self.is_above_threshold(inst_dec.running_since,
+            self.is_above_threshold(inst_dec.running_since(),
                                     self.shelve_running_threshold) or \
-            self.is_above_threshold(inst_dec.stopped_since,
+            self.is_above_threshold(inst_dec.stopped_since(),
                                     self.shelve_stopped_threshold)
 
     def should_delete(self, inst_dec):
@@ -123,7 +123,7 @@ class TimeThresholdSettings:
         :type: InstanceDecorator.
         :return: whether it should.
         """
-        return self.is_above_threshold(inst_dec.shelved_since,
+        return self.is_above_threshold(inst_dec.shelved_since(),
                                        self.delete_shelved_threshold)
 
     @staticmethod
@@ -134,6 +134,8 @@ class TimeThresholdSettings:
         :param threshold: threshold.
         :return: whether more time has passed since 'time' than the threshold.
         """
+        if not time or not threshold:
+            return False
         updated_at = dateutil.parser.parse(time).replace(tzinfo=None)
         expiration_threshold = datetime.datetime.utcnow() - \
                                datetime.timedelta(days=threshold)
@@ -144,28 +146,60 @@ class InstanceDecorator:
     """A decorator for the novaclient instances.
     """
 
-    def __init__(self, instance):
+    active_vm_states = {'active', 'building', 'paused', 'resized'}
+    stopped_vm_states = {'stopped', 'suspended'}
+    shelved_vm_states = {'shelved_offloaded'}
+
+    def __init__(self, instance, nova):
         """Initializer.
 
         :param instance: novaclient server instance.
+        :param nova: a novaclient instance for API requests.
         """
         self.instance = instance
+        self.nova = nova
+        actions = self.nova.instance_action.list(self.instance)
+        self.actions_log = sorted(actions,
+                                  key=lambda x: x.start_time,
+                                  reverse=True)
 
     @property
     def name(self):
         return self.instance.human_id
 
     @property
+    def status(self):
+        return getattr(self.instance, 'OS-EXT-STS:vm_state')
+
     def running_since(self):
-        pass
+        if not self.actions_log or self.status not in self.active_vm_states:
+            return None
+        for action in self.actions_log:
+            trans = get_transition(action.action)
+            # First one to cause it to transition to a running state.
+            if trans == StateTransition.TO_RUNNING:
+                return action.action
+        return datetime.datetime.min
 
-    @property
     def stopped_since(self):
-        pass
+        if not self.actions_log or self.status not in self.stopped_vm_states:
+            return None
+        for action in self.actions_log:
+            trans = get_transition(action.action)
+            # First one to cause it to transition to a stopped state.
+            if trans == StateTransition.TO_STOPPED:
+                return action.action
+        return datetime.datetime.min
 
-    @property
     def shelved_since(self):
-        pass
+        if not self.actions_log or self.status not in self.shelved_vm_states:
+            return None
+        for action in self.actions_log:
+            trans = get_transition(action.action)
+            # First one to cause it to transition to a shelved state.
+            if trans == StateTransition.TO_SHELVED:
+                return action.action
+        return datetime.datetime.min
 
 
 def get_verdict(project_name, inst_dec, configuration):
@@ -270,7 +304,7 @@ def get_violating_instances(project_names, configuration):
         instances_list = nova.servers.list()
 
         for instance in instances_list:
-            inst_dec = InstanceDecorator(instance)
+            inst_dec = InstanceDecorator(instance, nova)
             verdict = get_verdict(project, inst_dec,
                                   configuration)
             if verdict != Verdict.DO_NOTHING:
