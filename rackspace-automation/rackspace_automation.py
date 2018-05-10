@@ -321,10 +321,10 @@ def get_violating_instances(project_names, configuration):
             if verdict != Verdict.DO_NOTHING:
                 add_instance_to_dicts(project, inst_dec, verdict)
 
-        return {'instances_to_shelve': instances_to_shelve,
-                'instances_to_delete': instances_to_delete,
-                'shelve_warnings': shelve_warnings,
-                'delete_warnings': delete_warnings}
+    return {'instances_to_shelve': instances_to_shelve,
+            'instances_to_delete': instances_to_delete,
+            'shelve_warnings': shelve_warnings,
+            'delete_warnings': delete_warnings}
 
 
 def get_tenant_names(credentials):
