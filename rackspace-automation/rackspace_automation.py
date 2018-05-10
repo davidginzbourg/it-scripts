@@ -149,14 +149,14 @@ class TimeThresholdSettings:
         """Calculates the time difference between now and the given time and
         checks it against the threshold.
         :param time: time to check.
-        :param threshold: threshold.
+        :param threshold: threshold in seconds.
         :return: whether more time has passed since 'time' than the threshold.
         """
         if not time or not threshold:
             return False
         updated_at = dateutil.parser.parse(time).replace(tzinfo=None)
         expiration_threshold = datetime.datetime.utcnow() - \
-                               datetime.timedelta(days=threshold)
+                               datetime.timedelta(seconds=threshold)
         return updated_at - expiration_threshold <= datetime.timedelta(0)
 
 
