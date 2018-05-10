@@ -260,14 +260,14 @@ def get_verdict(project_name, inst_dec, configuration):
             threshold_settings = \
                 configuration[INSTANCE_SETTINGS][project_name][inst_dec.name]
 
-    if threshold_settings.should_shelve_warn(inst_dec):
-        return Verdict.SHELVE_WARN
-    if threshold_settings.should_delete_warn(inst_dec):
-        return Verdict.DELETE_WARN
     if threshold_settings.should_shelve(inst_dec):
         return Verdict.SHELVE
+    if threshold_settings.should_shelve_warn(inst_dec):
+        return Verdict.SHELVE_WARN
     if threshold_settings.should_delete(inst_dec):
         return Verdict.DELETE
+    if threshold_settings.should_delete_warn(inst_dec):
+        return Verdict.DELETE_WARN
     return Verdict.DO_NOTHING
 
 
