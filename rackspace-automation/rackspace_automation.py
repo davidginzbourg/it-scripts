@@ -254,35 +254,6 @@ def get_verdict(project_name, inst_dec, configuration):
         return Verdict.DELETE
     return Verdict.DO_NOTHING
 
-
-def send_warnings(shelve_warnings, delete_warnings, **kwargs):
-    """Sends out a warning regarding the given instances.
-
-    :param shelve_warnings: instances that their owners should be warned before
-     shelving.
-    :param delete_warnings: instances that their owners should be warned before
-     deletion.
-    """
-    print('Shelved warnings: {}'.format(shelve_warnings))
-    print('Delete warnings: {}'.format(delete_warnings))
-
-
-def delete_instances(instances_to_delete, **kwargs):
-    """Delete the shelved instances.
-
-    :param instances_to_delete: instances to delete.
-    """
-    print('DELETE: {}'.format(instances_to_delete))
-
-
-def shelve(instances_to_shelve, **kwargs):
-    """Shelve the instances.
-
-    :param instances_to_shelve: instances to shelve.
-    """
-    print('SHELVE: {}'.format(instances_to_shelve))
-
-
 def get_violating_instances(project_names, configuration):
     """Retrieve instances that violate violations.
 
@@ -490,6 +461,33 @@ def get_spreadsheet_creds():
     return ServiceAccountCredentials.from_json_keyfile_name(
         CREDENTIALS_FILE_PATH, scopes=SCOPES)
 
+
+def send_warnings(shelve_warnings, delete_warnings, **kwargs):
+    """Sends out a warning regarding the given instances.
+
+    :param shelve_warnings: instances that their owners should be warned before
+     shelving.
+    :param delete_warnings: instances that their owners should be warned before
+     deletion.
+    """
+    print('Shelved warnings: {}'.format(shelve_warnings))
+    print('Delete warnings: {}'.format(delete_warnings))
+
+
+def delete_instances(instances_to_delete, **kwargs):
+    """Delete the shelved instances.
+
+    :param instances_to_delete: instances to delete.
+    """
+    print('DELETE: {}'.format(instances_to_delete))
+
+
+def shelve(instances_to_shelve, **kwargs):
+    """Shelve the instances.
+
+    :param instances_to_shelve: instances to shelve.
+    """
+    print('SHELVE: {}'.format(instances_to_shelve))
 
 def main():
     spreadsheet_credentials = get_spreadsheet_creds()
