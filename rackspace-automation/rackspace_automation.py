@@ -45,6 +45,12 @@ if not OPENSTACK_MAIN_PROJECT:
     raise Exception('Missing OPENSTACK_MAIN_PROJECT env var')
 
 
+class StateTransition:
+    """Enum class for state transitions.
+    """
+    TO_RUNNING, TO_SHELVED, TO_STOPPED, NO_CHANGE = range(4)
+
+
 class Verdict:
     """Enum class for states.
     """
@@ -200,6 +206,27 @@ class InstanceDecorator:
             if trans == StateTransition.TO_SHELVED:
                 return action.action
         return datetime.datetime.min
+
+
+def get_transition(action_str):
+    """Given an action, it returns the corresponding transition of that action.
+    e.g. 'start' action returns a to_running transition, meaning that 'start'
+    transitions the instance to a running state.
+
+    :param action_str: action to check with.
+    :return: a transition.
+    :rtype: StateTransition
+    """
+    to_running = {'rebuild', 'resume', 'os-start', 'unpause', 'unshelve'}
+    to_shelved = {'shelve', 'shelveOffload'}
+    to_stopped = {'pause', 'os-stop', 'suspend'}
+    if action_str in to_running:
+        return StateTransition.TO_RUNNING
+    if action_str in to_shelved:
+        return StateTransition.TO_SHELVED
+    if action_str in to_stopped:
+        return StateTransition.TO_STOPPED
+    return StateTransition.NO_CHANGE
 
 
 def get_verdict(project_name, inst_dec, configuration):
