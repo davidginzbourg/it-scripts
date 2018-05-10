@@ -196,7 +196,7 @@ class InstanceDecorator:
             trans = get_transition(action.action)
             # First one to cause it to transition to a running state.
             if trans == StateTransition.TO_RUNNING:
-                return action.action
+                return action.start_time
         return datetime.datetime.min
 
     def stopped_since(self):
@@ -206,7 +206,7 @@ class InstanceDecorator:
             trans = get_transition(action.action)
             # First one to cause it to transition to a stopped state.
             if trans == StateTransition.TO_STOPPED:
-                return action.action
+                return action.start_time
         return datetime.datetime.min
 
     def shelved_since(self):
@@ -216,7 +216,7 @@ class InstanceDecorator:
             trans = get_transition(action.action)
             # First one to cause it to transition to a shelved state.
             if trans == StateTransition.TO_SHELVED:
-                return action.action
+                return action.start_time
         return datetime.datetime.min
 
 
