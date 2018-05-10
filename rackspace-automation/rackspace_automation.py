@@ -222,6 +222,9 @@ class InstanceDecorator:
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return self.name
+
 
 def get_transition(action_str):
     """Given an action, it returns the corresponding transition of that action.
