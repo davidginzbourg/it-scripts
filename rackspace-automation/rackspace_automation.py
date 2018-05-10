@@ -219,6 +219,8 @@ class InstanceDecorator:
                 return action.start_time
         return str(datetime.datetime.max)
 
+    def __str__(self):
+        return self.name
 
 
 def get_transition(action_str):
