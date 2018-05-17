@@ -68,7 +68,6 @@ DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
 if not DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
     raise Exception('Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
-
 class StateTransition:
     """Enum class for state transitions.
     """
