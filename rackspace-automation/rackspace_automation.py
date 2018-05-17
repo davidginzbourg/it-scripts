@@ -619,7 +619,7 @@ def add_missing_tenant_email_addresses(project_names, configuration,
         sheet.append_row([project, DEFAULT_NOTIFICATION_EMAIL_ADDRESS])
 
 
-def main():
+def main(event, context):
     spreadsheet_credentials = get_spreadsheet_creds()
     configuration = fetch_configuration(spreadsheet_credentials)
     main_proj_creds = get_credentials(OPENSTACK_MAIN_PROJECT)
@@ -635,7 +635,3 @@ def main():
     send_warnings(configuration=configuration,
                   shelve_warnings=violating_instances['shelve_warnings'],
                   delete_warnings=violating_instances['delete_warnings'])
-
-
-if __name__ == '__main__':
-    main()
