@@ -518,18 +518,17 @@ def get_spreadsheet_creds():
         CREDENTIALS_FILE_PATH, scopes=SCOPES)
 
 
-def send_warnings(shelve_warnings, delete_warnings, **kwargs):
+def send_warnings(configuration, shelve_warnings, delete_warnings):
     """Sends out a warning regarding the given instances.
 
+    :param configuration: program configuration.
     :param shelve_warnings: instances that their owners should be warned before
      shelving.
     :param delete_warnings: instances that their owners should be warned before
      deletion.
-    :keyword configuration: program configuration.
     """
-    configuration = kwargs['configuration']
     subject = 'Rackspace before SHELVE warning'
-    for tenant, instances in shelve_warnings.values():
+    for tenant, instances in shelve_warnings.items():
         destination = configuration[EMAIL_ADDRESSES][tenant]
         message = 'The following instances in the {0} tenant will be ' \
                   'shelved soon: {1}'.format(tenant, instances)
@@ -542,7 +541,7 @@ def send_warnings(shelve_warnings, delete_warnings, **kwargs):
                                            })['MessageId']
 
     subject = 'Rackspace before DELETE warning'
-    for tenant, instances in delete_warnings.values():
+    for tenant, instances in delete_warnings.items():
         destination = configuration[EMAIL_ADDRESSES][tenant]
         message = 'The following instances in the {0} tenant will be ' \
                   'shelved soon: {1}'.format(tenant, instances)
@@ -557,15 +556,14 @@ def send_warnings(shelve_warnings, delete_warnings, **kwargs):
         # print('Delete warnings: {}'.format(delete_warnings))
 
 
-def delete_instances(instances_to_delete, **kwargs):
+def delete_instances(configuration, instances_to_delete ):
     """Delete the shelved instances.
 
+    :param configuration: program configuration.
     :param instances_to_delete: instances to delete.
-    :keyword configuration: program configuration.
     """
-    configuration = kwargs['configuration']
     subject = 'Rackspace DELETE notification'
-    for tenant, instances in instances_to_delete.values():
+    for tenant, instances in instances_to_delete.items():
         destination = configuration[EMAIL_ADDRESSES][tenant]
         message = 'The following instances in the {0} tenant has been ' \
                   'deleted: {1}'.format(tenant, instances)
@@ -579,15 +577,14 @@ def delete_instances(instances_to_delete, **kwargs):
         # print('DELETE: {}'.format(instances_to_delete))
 
 
-def shelve(instances_to_shelve, **kwargs):
+def shelve(configuration, instances_to_shelve):
     """Shelve the instances.
 
+    :param configuration: program configuration.
     :param instances_to_shelve: instances to shelve.
-    :keyword configuration: program configuration.
     """
-    configuration = kwargs['configuration']
     subject = 'Rackspace SHELVE notification'
-    for tenant, instances in instances_to_shelve.values():
+    for tenant, instances in instances_to_shelve.items():
         destination = configuration[EMAIL_ADDRESSES][tenant]
         message = 'The following instances in the {0} tenant has been ' \
                   'shelved: {1}'.format(tenant, instances)
@@ -630,9 +627,13 @@ def main():
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    shelve(configuration=configuration, **violating_instances)
-    delete_instances(configuration=configuration, **violating_instances)
-    send_warnings(configuration=configuration, **violating_instances)
+    shelve(configuration=configuration,
+           instances_to_shelve=violating_instances['instances_to_shelve'])
+    delete_instances(configuration=configuration,
+                     instances_to_delete=violating_instances['instances_to_delete'])
+    send_warnings(configuration=configuration,
+                  shelve_warnings=violating_instances['shelve_warnings'],
+                  delete_warnings=violating_instances['delete_warnings'])
 
 
 if __name__ == '__main__':
