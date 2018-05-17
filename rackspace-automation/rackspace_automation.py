@@ -10,7 +10,7 @@ from novaclient import client as novaclient
 from keystoneclient.v3 import client as keystoneclient
 from oauth2client.service_account import ServiceAccountCredentials
 
-sns_client = boto3.client('sns')
+ses_client = boto3.client('ses', region_name='eu-west-1')
 
 INSTANCE_SETTINGS = 'instance_settings'
 GLOBAL_SETTINGS = 'settings'
@@ -27,6 +27,10 @@ TENANT_NAME = 'tenant_name'
 EMAIL_ADDRESS = 'email_address'
 
 SCOPES = ['https://spreadsheets.google.com/feeds']
+SOURCE_EMAIL_ADDRESS = os.environ.get('SOURCE_EMAIL_ADDRESS')
+if not SOURCE_EMAIL_ADDRESS:
+    raise Exception('Missing SOURCE_EMAIL_ADDRESS env var')
+
 CREDENTIALS_FILE_PATH = os.environ.get('CREDENTIALS_FILE_PATH')
 if not CREDENTIALS_FILE_PATH:
     raise Exception('Missing CREDENTIALS_FILE_PATH env var')
@@ -67,6 +71,7 @@ DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
     os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
 if not DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
     raise Exception('Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
+
 
 class StateTransition:
     """Enum class for state transitions.
@@ -520,25 +525,80 @@ def send_warnings(shelve_warnings, delete_warnings, **kwargs):
      shelving.
     :param delete_warnings: instances that their owners should be warned before
      deletion.
+    :keyword configuration: program configuration.
     """
-    print('Shelved warnings: {}'.format(shelve_warnings))
-    print('Delete warnings: {}'.format(delete_warnings))
+    configuration = kwargs['configuration']
+    subject = 'Rackspace before SHELVE warning'
+    for tenant, instances in shelve_warnings.values():
+        destination = configuration[EMAIL_ADDRESSES][tenant]
+        message = 'The following instances in the {0} tenant will be ' \
+                  'shelved soon: {1}'.format(tenant, instances)
+        message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
+                                           Destination=destination,
+                                           Message={
+                                               'Subject': {'Data': subject},
+                                               'Body': {
+                                                   'Html': {'Data': message}}
+                                           })['MessageId']
+
+    subject = 'Rackspace before DELETE warning'
+    for tenant, instances in delete_warnings.values():
+        destination = configuration[EMAIL_ADDRESSES][tenant]
+        message = 'The following instances in the {0} tenant will be ' \
+                  'shelved soon: {1}'.format(tenant, instances)
+        message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
+                                           Destination=destination,
+                                           Message={
+                                               'Subject': {'Data': subject},
+                                               'Body': {
+                                                   'Html': {'Data': message}}
+                                           })['MessageId']
+        # print('Shelved warnings: {}'.format(shelve_warnings))
+        # print('Delete warnings: {}'.format(delete_warnings))
 
 
 def delete_instances(instances_to_delete, **kwargs):
     """Delete the shelved instances.
 
     :param instances_to_delete: instances to delete.
+    :keyword configuration: program configuration.
     """
-    print('DELETE: {}'.format(instances_to_delete))
+    configuration = kwargs['configuration']
+    subject = 'Rackspace DELETE notification'
+    for tenant, instances in instances_to_delete.values():
+        destination = configuration[EMAIL_ADDRESSES][tenant]
+        message = 'The following instances in the {0} tenant has been ' \
+                  'deleted: {1}'.format(tenant, instances)
+        message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
+                                           Destination=destination,
+                                           Message={
+                                               'Subject': {'Data': subject},
+                                               'Body': {
+                                                   'Html': {'Data': message}}
+                                           })['MessageId']
+        # print('DELETE: {}'.format(instances_to_delete))
 
 
 def shelve(instances_to_shelve, **kwargs):
     """Shelve the instances.
 
     :param instances_to_shelve: instances to shelve.
+    :keyword configuration: program configuration.
     """
-    print('SHELVE: {}'.format(instances_to_shelve))
+    configuration = kwargs['configuration']
+    subject = 'Rackspace SHELVE notification'
+    for tenant, instances in instances_to_shelve.values():
+        destination = configuration[EMAIL_ADDRESSES][tenant]
+        message = 'The following instances in the {0} tenant has been ' \
+                  'shelved: {1}'.format(tenant, instances)
+        message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
+                                           Destination=destination,
+                                           Message={
+                                               'Subject': {'Data': subject},
+                                               'Body': {
+                                                   'Html': {'Data': message}}
+                                           })['MessageId']
+        # print('SHELVE: {}'.format(instances_to_shelve))
 
 
 def add_missing_tenant_email_addresses(project_names, configuration,
@@ -570,9 +630,9 @@ def main():
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    shelve(**violating_instances)
-    delete_instances(**violating_instances)
-    send_warnings(**violating_instances)
+    shelve(configuration=configuration, **violating_instances)
+    delete_instances(configuration=configuration, **violating_instances)
+    send_warnings(configuration=configuration, **violating_instances)
 
 
 if __name__ == '__main__':
