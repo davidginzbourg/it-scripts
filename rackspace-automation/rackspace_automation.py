@@ -529,7 +529,7 @@ def send_warnings(configuration, shelve_warnings, delete_warnings):
     """
     subject = 'Rackspace before SHELVE warning'
     for tenant, instances in shelve_warnings.items():
-        destination = configuration[EMAIL_ADDRESSES][tenant]
+        destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
         message = 'The following instances in the {0} tenant will be ' \
                   'shelved soon: {1}'.format(tenant, instances)
         message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
@@ -542,7 +542,7 @@ def send_warnings(configuration, shelve_warnings, delete_warnings):
 
     subject = 'Rackspace before DELETE warning'
     for tenant, instances in delete_warnings.items():
-        destination = configuration[EMAIL_ADDRESSES][tenant]
+        destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
         message = 'The following instances in the {0} tenant will be ' \
                   'shelved soon: {1}'.format(tenant, instances)
         message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
@@ -556,7 +556,7 @@ def send_warnings(configuration, shelve_warnings, delete_warnings):
         # print('Delete warnings: {}'.format(delete_warnings))
 
 
-def delete_instances(configuration, instances_to_delete ):
+def delete_instances(configuration, instances_to_delete):
     """Delete the shelved instances.
 
     :param configuration: program configuration.
@@ -564,7 +564,7 @@ def delete_instances(configuration, instances_to_delete ):
     """
     subject = 'Rackspace DELETE notification'
     for tenant, instances in instances_to_delete.items():
-        destination = configuration[EMAIL_ADDRESSES][tenant]
+        destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
         message = 'The following instances in the {0} tenant has been ' \
                   'deleted: {1}'.format(tenant, instances)
         message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
@@ -585,7 +585,7 @@ def shelve(configuration, instances_to_shelve):
     """
     subject = 'Rackspace SHELVE notification'
     for tenant, instances in instances_to_shelve.items():
-        destination = configuration[EMAIL_ADDRESSES][tenant]
+        destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
         message = 'The following instances in the {0} tenant has been ' \
                   'shelved: {1}'.format(tenant, instances)
         message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
@@ -630,7 +630,8 @@ def main():
     shelve(configuration=configuration,
            instances_to_shelve=violating_instances['instances_to_shelve'])
     delete_instances(configuration=configuration,
-                     instances_to_delete=violating_instances['instances_to_delete'])
+                     instances_to_delete=violating_instances[
+                         'instances_to_delete'])
     send_warnings(configuration=configuration,
                   shelve_warnings=violating_instances['shelve_warnings'],
                   delete_warnings=violating_instances['delete_warnings'])
