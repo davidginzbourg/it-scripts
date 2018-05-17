@@ -14,6 +14,7 @@ sns_client = boto3.client('sns')
 
 INSTANCE_SETTINGS = 'instance_settings'
 GLOBAL_SETTINGS = 'settings'
+EMAIL_ADDRESSES = 'email_addresses'
 PROJECT_NAME = 'project_name'
 INSTANCE_NAME = 'instance_name'
 SHELVE_RUNNING_WARNING_THRESHOLD = 'shelve_running_warning_threshold'
@@ -22,6 +23,8 @@ SHELVE_STOPPED_WARNING_THRESHOLD = 'shelve_stopped_warning_threshold'
 SHELVE_STOPPED_THRESHOLD = 'shelve_stopped_threshold'
 DELETE_WARNING_THRESHOLD = 'delete_warning_threshold'
 DELETE_SHELVED_THRESHOLD = 'delete_shelved_threshold'
+TENANT_NAME = 'tenant_name'
+EMAIL_ADDRESS = 'email_address'
 
 SCOPES = ['https://spreadsheets.google.com/feeds']
 CREDENTIALS_FILE_PATH = os.environ.get('CREDENTIALS_FILE_PATH')
@@ -35,6 +38,10 @@ if not SPREADSHEET_ID:
 SETTINGS_WORKSHEET = os.environ.get('SETTINGS_WORKSHEET')
 if not SETTINGS_WORKSHEET:
     raise Exception('Missing SETTINGS_WORKSHEET env var')
+
+EMAIL_ADDRESSES_WORKSHEET = os.environ.get('EMAIL_ADDRESSES_WORKSHEET')
+if not EMAIL_ADDRESSES_WORKSHEET:
+    raise Exception('Missing EMAIL_ADDRESSES_WORKSHEET env var')
 
 INSTANCE_SETTINGS_WORKSHEET = os.environ.get('INSTANCE_SETTINGS_WORKSHEET')
 if not INSTANCE_SETTINGS_WORKSHEET:
@@ -55,6 +62,11 @@ if not OPENSTACK_USERNAME:
 OPENSTACK_PASSWORD = os.environ.get('OPENSTACK_PASSWORD')
 if not OPENSTACK_PASSWORD:
     raise Exception('Missing OPENSTACK_PASSWORD env var')
+
+DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
+    os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
+if not DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
+    raise Exception('Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
 
 class StateTransition:
@@ -362,20 +374,22 @@ def fetch_configuration(spreadsheet_creds):
                     'instance_j': TimeThresholdSettings
                 }
         }
-    'settings': TimeThresholdSettings
+    'settings': TimeThresholdSettings,
+    'email_addresses': { 'tenant_name': 'email_address', ... }
     }
 
     :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: the program settings.
     """
     return {INSTANCE_SETTINGS: fetch_instance_settings(spreadsheet_creds),
-            GLOBAL_SETTINGS: fetch_global_settings(spreadsheet_creds)}
+            GLOBAL_SETTINGS: fetch_global_settings(spreadsheet_creds),
+            EMAIL_ADDRESSES: fetch_email_addresses(spreadsheet_creds)}
 
 
 def fetch_instance_settings(spreadsheet_creds):
     """Returns the instance settings.
 
-    :param spreadsheet_creds:
+    :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: the instance settings as a dict:
     {
         'project_i':
@@ -444,7 +458,7 @@ def fetch_instance_settings(spreadsheet_creds):
 def fetch_global_settings(spreadsheet_creds):
     """Returns the global settings from the Spreadsheet.
 
-    :param spreadsheet_creds:
+    :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: global settings of the program.
     :rtype: TimeThresholdSettings
     """
@@ -454,6 +468,24 @@ def fetch_global_settings(spreadsheet_creds):
     if not contents:
         raise Exception("Settings worksheet is empty.")
     return TimeThresholdSettings(**contents[0])
+
+
+def fetch_email_addresses(spreadsheet_creds):
+    """Returns the tenant's notification email addresses from the Spreadsheet.
+
+    :param spreadsheet_creds: Google Spreadsheet credentials.
+    :return: global settings of the program.
+    :rtype: TimeThresholdSettings
+    """
+    gc = gspread.authorize(spreadsheet_creds)
+    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(EMAIL_ADDRESSES_WORKSHEET)
+    contents = sheet.get_all_records()
+    if not contents:
+        raise Exception("Email addresses worksheet is empty.")
+    email_addresses = {}
+    for row in contents:
+        email_addresses[row[TENANT_NAME]] = row[EMAIL_ADDRESS]
+    return email_addresses
 
 
 def get_credentials(project):
@@ -510,11 +542,33 @@ def shelve(instances_to_shelve, **kwargs):
     print('SHELVE: {}'.format(instances_to_shelve))
 
 
+def add_missing_tenant_email_addresses(project_names, configuration,
+                                       spreadsheet_creds):
+    """Adds default notification email addresses for new tenants.
+
+    :param project_names: tenant names.
+    :param configuration: current configuration.
+    :param spreadsheet_creds: Google Spreadsheet credentials.
+    """
+    tenants_to_add = []
+    for project in project_names:
+        if project not in configuration[EMAIL_ADDRESSES]:
+            configuration[EMAIL_ADDRESSES][project] = \
+                DEFAULT_NOTIFICATION_EMAIL_ADDRESS
+            tenants_to_add.append(project)
+
+    gc = gspread.authorize(spreadsheet_creds)
+    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(EMAIL_ADDRESSES_WORKSHEET)
+    for project in tenants_to_add:
+        sheet.append_row([project, DEFAULT_NOTIFICATION_EMAIL_ADDRESS])
+
 def main():
     spreadsheet_credentials = get_spreadsheet_creds()
     configuration = fetch_configuration(spreadsheet_credentials)
     main_proj_creds = get_credentials(OPENSTACK_MAIN_PROJECT)
     project_names = get_tenant_names(main_proj_creds)
+    add_missing_tenant_email_addresses(project_names, configuration,
+                                       spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
     shelve(**violating_instances)
     delete_instances(**violating_instances)
