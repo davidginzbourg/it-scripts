@@ -562,6 +562,7 @@ def add_missing_tenant_email_addresses(project_names, configuration,
     for project in tenants_to_add:
         sheet.append_row([project, DEFAULT_NOTIFICATION_EMAIL_ADDRESS])
 
+
 def main():
     spreadsheet_credentials = get_spreadsheet_creds()
     configuration = fetch_configuration(spreadsheet_credentials)
