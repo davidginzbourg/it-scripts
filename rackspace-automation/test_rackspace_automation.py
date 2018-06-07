@@ -7,20 +7,6 @@ import rackspace_automation
 class OsEnvVarsTest(unittest.TestCase):
     """Tests os environment variables check.
     """
-    os_environ = {
-        'SOURCE_EMAIL_ADDRESS': 'value_source_email_address',
-        'CREDENTIALS_FILE_PATH': 'value_credentials_file_path',
-        'SPREADSHEET_ID': 'value_spreadsheet_id',
-        'SETTINGS_WORKSHEET': 'value_settings_worksheet',
-        'EMAIL_ADDRESSES_WORKSHEET': 'value_email_addresses_worksheet',
-        'INSTANCE_SETTINGS_WORKSHEET': 'value_instance_settings_worksheet',
-        'OPENSTACK_MAIN_PROJECT': 'value_openstack_main_project',
-        'OPENSTACK_URL': 'value_openstack_url',
-        'OPENSTACK_USERNAME': 'value_openstack_username',
-        'OPENSTACK_PASSWORD': 'value_openstack_password',
-        'DEFAULT_NOTIFICATION_EMAIL_ADDRESS':
-            'value_default_notification_email_address'
-    }
 
     def test_all_os_vars(self):
         """Tests that all os variables are checked.
@@ -64,6 +50,25 @@ class OsEnvVarsTest(unittest.TestCase):
         self.assertRaises(rackspace_automation.RackspaceAutomationException,
                           rackspace_automation.check_os_environ_vars)
 
+
+class FetchConfigurationsTests(unittest.TestCase):
+    """Fetch configurations test cases.
+    """
+    os_environ = {
+        'SOURCE_EMAIL_ADDRESS': 'value_source_email_address',
+        'CREDENTIALS_FILE_PATH': 'value_credentials_file_path',
+        'SPREADSHEET_ID': 'value_spreadsheet_id',
+        'SETTINGS_WORKSHEET': 'value_settings_worksheet',
+        'EMAIL_ADDRESSES_WORKSHEET': 'value_email_addresses_worksheet',
+        'INSTANCE_SETTINGS_WORKSHEET': 'value_instance_settings_worksheet',
+        'OPENSTACK_MAIN_PROJECT': 'value_openstack_main_project',
+        'OPENSTACK_URL': 'value_openstack_url',
+        'OPENSTACK_USERNAME': 'value_openstack_username',
+        'OPENSTACK_PASSWORD': 'value_openstack_password',
+        'DEFAULT_NOTIFICATION_EMAIL_ADDRESS':
+            'value_default_notification_email_address'
+    }
+
     @mock.patch('rackspace_automation.fetch_email_addresses')
     @mock.patch('rackspace_automation.fetch_global_settings')
     @mock.patch('rackspace_automation.fetch_instance_settings')
@@ -76,7 +81,7 @@ class OsEnvVarsTest(unittest.TestCase):
         some_global_settings = 'some_global_settings'
         some_email_addr = 'some_email_addr'
         magic_mock = MagicMock()
-        magic_mock.mock.dict('os.environ', OsEnvVarsTest.os_environ)
+        magic_mock.mock.dict('os.environ', FetchConfigurationsTests.os_environ)
         mock_fetch_instance_settings.return_value = some_inst_settings
         mock_fetch_global_settings.return_value = some_global_settings
         mock_fetch_email_addresses.return_value = some_email_addr
