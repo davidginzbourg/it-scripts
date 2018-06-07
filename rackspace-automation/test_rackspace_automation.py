@@ -1,4 +1,5 @@
 import unittest
+import mock
 from mock import MagicMock
 import rackspace_automation
 
@@ -6,11 +7,24 @@ import rackspace_automation
 class OsEnvVarsTest(unittest.TestCase):
     """Tests os environment variables check.
     """
+    os_environ = {
+        'SOURCE_EMAIL_ADDRESS': 'value_source_email_address',
+        'CREDENTIALS_FILE_PATH': 'value_credentials_file_path',
+        'SPREADSHEET_ID': 'value_spreadsheet_id',
+        'SETTINGS_WORKSHEET': 'value_settings_worksheet',
+        'EMAIL_ADDRESSES_WORKSHEET': 'value_email_addresses_worksheet',
+        'INSTANCE_SETTINGS_WORKSHEET': 'value_instance_settings_worksheet',
+        'OPENSTACK_MAIN_PROJECT': 'value_openstack_main_project',
+        'OPENSTACK_URL': 'value_openstack_url',
+        'OPENSTACK_USERNAME': 'value_openstack_username',
+        'OPENSTACK_PASSWORD': 'value_openstack_password',
+        'DEFAULT_NOTIFICATION_EMAIL_ADDRESS':
+            'value_default_notification_email_address'
+    }
 
     def test_all_os_vars(self):
         """Tests that all os variables are checked.
         """
-        SCOPES = ['https://spreadsheets.google.com/feeds']
         os_environ_dict = {}
         magic_mock = MagicMock()
         magic_mock.mock.dict('os.environ', os_environ_dict)
@@ -49,3 +63,35 @@ class OsEnvVarsTest(unittest.TestCase):
         os_environ_dict['DEFAULT_NOTIFICATION_EMAIL_ADDRESS'] = 'something'
         self.assertRaises(rackspace_automation.RackspaceAutomationException,
                           rackspace_automation.check_os_environ_vars)
+
+    @mock.patch('rackspace_automation.fetch_email_addresses')
+    @mock.patch('rackspace_automation.fetch_global_settings')
+    @mock.patch('rackspace_automation.fetch_instance_settings')
+    def test_fetch_configuration(self, mock_fetch_instance_settings,
+                                 mock_fetch_global_settings,
+                                 mock_fetch_email_addresses):
+        """Tests fetch_configuration.
+        """
+        some_inst_settings = 'some_inst_settings'
+        some_global_settings = 'some_global_settings'
+        some_email_addr = 'some_email_addr'
+        magic_mock = MagicMock()
+        magic_mock.mock.dict('os.environ', OsEnvVarsTest.os_environ)
+        mock_fetch_instance_settings.return_value = some_inst_settings
+        mock_fetch_global_settings.return_value = some_global_settings
+        mock_fetch_email_addresses.return_value = some_email_addr
+
+        return_val = rackspace_automation.fetch_configuration('dummy_str')
+        mock_fetch_instance_settings.assert_called()
+        mock_fetch_global_settings.assert_called()
+        mock_fetch_email_addresses.assert_called()
+
+        INSTANCE_SETTINGS = self.os_environ['INSTANCE_SETTINGS']
+        GLOBAL_SETTINGS = self.os_environ['GLOBAL_SETTINGS']
+        EMAIL_ADDRESSES = self.os_environ['EMAIL_ADDRESSES']
+        self.assertEqual(return_val[INSTANCE_SETTINGS], some_inst_settings,
+                         'Instance settings value is incorrect')
+        self.assertEqual(return_val[GLOBAL_SETTINGS], some_global_settings,
+                         'Global settings value is incorrect')
+        self.assertEqual(return_val[EMAIL_ADDRESSES], some_email_addr,
+                         'Email Addresses value is incorrect')
