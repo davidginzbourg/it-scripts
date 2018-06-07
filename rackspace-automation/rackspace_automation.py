@@ -28,49 +28,17 @@ EMAIL_ADDRESS = 'email_address'
 
 SCOPES = ['https://spreadsheets.google.com/feeds']
 SOURCE_EMAIL_ADDRESS = os.environ.get('SOURCE_EMAIL_ADDRESS')
-if not SOURCE_EMAIL_ADDRESS:
-    raise Exception('Missing SOURCE_EMAIL_ADDRESS env var')
-
 CREDENTIALS_FILE_PATH = os.environ.get('CREDENTIALS_FILE_PATH')
-if not CREDENTIALS_FILE_PATH:
-    raise Exception('Missing CREDENTIALS_FILE_PATH env var')
-
 SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
-if not SPREADSHEET_ID:
-    raise Exception('Missing SPREADSHEET_ID env var')
-
 SETTINGS_WORKSHEET = os.environ.get('SETTINGS_WORKSHEET')
-if not SETTINGS_WORKSHEET:
-    raise Exception('Missing SETTINGS_WORKSHEET env var')
-
 EMAIL_ADDRESSES_WORKSHEET = os.environ.get('EMAIL_ADDRESSES_WORKSHEET')
-if not EMAIL_ADDRESSES_WORKSHEET:
-    raise Exception('Missing EMAIL_ADDRESSES_WORKSHEET env var')
-
 INSTANCE_SETTINGS_WORKSHEET = os.environ.get('INSTANCE_SETTINGS_WORKSHEET')
-if not INSTANCE_SETTINGS_WORKSHEET:
-    raise Exception('Missing INSTANCE_SETTINGS_WORKSHEET env var')
-
 OPENSTACK_MAIN_PROJECT = os.environ.get('OPENSTACK_MAIN_PROJECT')
-if not OPENSTACK_MAIN_PROJECT:
-    raise Exception('Missing OPENSTACK_MAIN_PROJECT env var')
-
 OPENSTACK_URL = os.environ.get('OPENSTACK_URL')
-if not OPENSTACK_URL:
-    raise Exception('Missing OPENSTACK_URL env var')
-
 OPENSTACK_USERNAME = os.environ.get('OPENSTACK_USERNAME')
-if not OPENSTACK_USERNAME:
-    raise Exception('Missing OPENSTACK_USERNAME env var')
-
 OPENSTACK_PASSWORD = os.environ.get('OPENSTACK_PASSWORD')
-if not OPENSTACK_PASSWORD:
-    raise Exception('Missing OPENSTACK_PASSWORD env var')
-
 DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
     os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
-if not DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
-    raise Exception('Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
 
 class StateTransition:
@@ -619,7 +587,36 @@ def add_missing_tenant_email_addresses(project_names, configuration,
         sheet.append_row([project, DEFAULT_NOTIFICATION_EMAIL_ADDRESS])
 
 
+def check_os_environ_vars():
+    """Checks whether all the OS Environment exist.
+    :raises: if any os.environ is missing.
+    """
+    if not SOURCE_EMAIL_ADDRESS:
+        raise Exception('Missing SOURCE_EMAIL_ADDRESS env var')
+    if not CREDENTIALS_FILE_PATH:
+        raise Exception('Missing CREDENTIALS_FILE_PATH env var')
+    if not SPREADSHEET_ID:
+        raise Exception('Missing SPREADSHEET_ID env var')
+    if not SETTINGS_WORKSHEET:
+        raise Exception('Missing SETTINGS_WORKSHEET env var')
+    if not EMAIL_ADDRESSES_WORKSHEET:
+        raise Exception('Missing EMAIL_ADDRESSES_WORKSHEET env var')
+    if not INSTANCE_SETTINGS_WORKSHEET:
+        raise Exception('Missing INSTANCE_SETTINGS_WORKSHEET env var')
+    if not OPENSTACK_MAIN_PROJECT:
+        raise Exception('Missing OPENSTACK_MAIN_PROJECT env var')
+    if not OPENSTACK_URL:
+        raise Exception('Missing OPENSTACK_URL env var')
+    if not OPENSTACK_USERNAME:
+        raise Exception('Missing OPENSTACK_USERNAME env var')
+    if not OPENSTACK_PASSWORD:
+        raise Exception('Missing OPENSTACK_PASSWORD env var')
+    if not DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
+        raise Exception('Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
+
+
 def main(event, context):
+    check_os_environ_vars()
     spreadsheet_credentials = get_spreadsheet_creds()
     configuration = fetch_configuration(spreadsheet_credentials)
     main_proj_creds = get_credentials(OPENSTACK_MAIN_PROJECT)
