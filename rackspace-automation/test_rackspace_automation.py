@@ -3,6 +3,31 @@ import mock
 from mock import MagicMock
 import rackspace_automation
 
+'''
+List of rackspace_automation functions:
+
+InstanceDecorator
+RackspaceAutomationException
+ServiceAccountCredentials
+StateTransition
+TimeThresholdSettings
+Verdict
+add_missing_tenant_email_addresses
+check_os_environ_vars
+delete_instances
+fetch_configuration
+fetch_email_addresses
+fetch_global_settings
+fetch_instance_settings
+get_credentials
+get_spreadsheet_creds
+get_tenant_names
+get_transition
+get_verdict
+get_violating_instances
+main
+send_warnings
+shelve
 
 class OsEnvVarsTest(unittest.TestCase):
     """Tests os environment variables check.
@@ -69,6 +94,7 @@ class FetchConfigurationsTests(unittest.TestCase):
             'value_default_notification_email_address'
     }
 
+    @mock.patch('os.environ', os_environ)
     @mock.patch('rackspace_automation.fetch_email_addresses')
     @mock.patch('rackspace_automation.fetch_global_settings')
     @mock.patch('rackspace_automation.fetch_instance_settings')
@@ -80,8 +106,7 @@ class FetchConfigurationsTests(unittest.TestCase):
         some_inst_settings = 'some_inst_settings'
         some_global_settings = 'some_global_settings'
         some_email_addr = 'some_email_addr'
-        magic_mock = MagicMock()
-        magic_mock.mock.dict('os.environ', FetchConfigurationsTests.os_environ)
+
         mock_fetch_instance_settings.return_value = some_inst_settings
         mock_fetch_global_settings.return_value = some_global_settings
         mock_fetch_email_addresses.return_value = some_email_addr
