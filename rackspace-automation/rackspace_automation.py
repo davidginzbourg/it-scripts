@@ -41,6 +41,12 @@ DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
     os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
 
 
+class RackspaceAutomationException(Exception):
+    """Rackspace automation exception.
+    """
+    pass
+
+
 class StateTransition:
     """Enum class for state transitions.
     """
@@ -438,7 +444,7 @@ def fetch_global_settings(spreadsheet_creds):
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(SETTINGS_WORKSHEET)
     contents = sheet.get_all_records()
     if not contents:
-        raise Exception("Settings worksheet is empty.")
+        raise RackspaceAutomationException("Settings worksheet is empty.")
     return TimeThresholdSettings(**contents[0])
 
 
@@ -453,7 +459,8 @@ def fetch_email_addresses(spreadsheet_creds):
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(EMAIL_ADDRESSES_WORKSHEET)
     contents = sheet.get_all_records()
     if not contents:
-        raise Exception("Email addresses worksheet is empty.")
+        raise RackspaceAutomationException(
+            "Email addresses worksheet is empty.")
     email_addresses = {}
     for row in contents:
         email_addresses[row[TENANT_NAME]] = row[EMAIL_ADDRESS]
@@ -592,27 +599,36 @@ def check_os_environ_vars():
     :raises: if any os.environ is missing.
     """
     if not SOURCE_EMAIL_ADDRESS:
-        raise Exception('Missing SOURCE_EMAIL_ADDRESS env var')
+        raise RackspaceAutomationException(
+            'Missing SOURCE_EMAIL_ADDRESS env var')
     if not CREDENTIALS_FILE_PATH:
-        raise Exception('Missing CREDENTIALS_FILE_PATH env var')
+        raise RackspaceAutomationException(
+            'Missing CREDENTIALS_FILE_PATH env var')
     if not SPREADSHEET_ID:
-        raise Exception('Missing SPREADSHEET_ID env var')
+        raise RackspaceAutomationException('Missing SPREADSHEET_ID env var')
     if not SETTINGS_WORKSHEET:
-        raise Exception('Missing SETTINGS_WORKSHEET env var')
+        raise RackspaceAutomationException(
+            'Missing SETTINGS_WORKSHEET env var')
     if not EMAIL_ADDRESSES_WORKSHEET:
-        raise Exception('Missing EMAIL_ADDRESSES_WORKSHEET env var')
+        raise RackspaceAutomationException(
+            'Missing EMAIL_ADDRESSES_WORKSHEET env var')
     if not INSTANCE_SETTINGS_WORKSHEET:
-        raise Exception('Missing INSTANCE_SETTINGS_WORKSHEET env var')
+        raise RackspaceAutomationException(
+            'Missing INSTANCE_SETTINGS_WORKSHEET env var')
     if not OPENSTACK_MAIN_PROJECT:
-        raise Exception('Missing OPENSTACK_MAIN_PROJECT env var')
+        raise RackspaceAutomationException(
+            'Missing OPENSTACK_MAIN_PROJECT env var')
     if not OPENSTACK_URL:
-        raise Exception('Missing OPENSTACK_URL env var')
+        raise RackspaceAutomationException('Missing OPENSTACK_URL env var')
     if not OPENSTACK_USERNAME:
-        raise Exception('Missing OPENSTACK_USERNAME env var')
+        raise RackspaceAutomationException(
+            'Missing OPENSTACK_USERNAME env var')
     if not OPENSTACK_PASSWORD:
-        raise Exception('Missing OPENSTACK_PASSWORD env var')
+        raise RackspaceAutomationException(
+            'Missing OPENSTACK_PASSWORD env var')
     if not DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
-        raise Exception('Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
+        raise RackspaceAutomationException(
+            'Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
 
 def main(event, context):
