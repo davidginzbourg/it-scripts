@@ -86,12 +86,12 @@ class OsEnvVarsTest(unittest.TestCase):
         mock_fetch_global_settings.assert_called()
         mock_fetch_email_addresses.assert_called()
 
-        INSTANCE_SETTINGS = self.os_environ['INSTANCE_SETTINGS']
-        GLOBAL_SETTINGS = self.os_environ['GLOBAL_SETTINGS']
-        EMAIL_ADDRESSES = self.os_environ['EMAIL_ADDRESSES']
-        self.assertEqual(return_val[INSTANCE_SETTINGS], some_inst_settings,
+        self.assertEqual(return_val[rackspace_automation.INSTANCE_SETTINGS],
+                         some_inst_settings,
                          'Instance settings value is incorrect')
-        self.assertEqual(return_val[GLOBAL_SETTINGS], some_global_settings,
+        self.assertEqual(return_val[rackspace_automation.GLOBAL_SETTINGS],
+                         some_global_settings,
                          'Global settings value is incorrect')
-        self.assertEqual(return_val[EMAIL_ADDRESSES], some_email_addr,
+        self.assertEqual(return_val[rackspace_automation.EMAIL_ADDRESSES],
+                         some_email_addr,
                          'Email Addresses value is incorrect')
