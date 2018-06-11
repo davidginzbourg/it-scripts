@@ -419,6 +419,7 @@ def fetch_instance_settings(spreadsheet_creds):
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(
         INSTANCE_SETTINGS_WORKSHEET)
     contents = sheet.get_all_records()
+    # TODO: split above code to a function
     if not contents:
         return {}
     for row_dict in contents:
@@ -443,6 +444,7 @@ def fetch_global_settings(spreadsheet_creds):
     gc = gspread.authorize(spreadsheet_creds)
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(SETTINGS_WORKSHEET)
     contents = sheet.get_all_records()
+    # TODO: split above code to a function
     if not contents:
         raise RackspaceAutomationException("Settings worksheet is empty.")
     return TimeThresholdSettings(**contents[0])
@@ -458,6 +460,7 @@ def fetch_email_addresses(spreadsheet_creds):
     gc = gspread.authorize(spreadsheet_creds)
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(EMAIL_ADDRESSES_WORKSHEET)
     contents = sheet.get_all_records()
+    # TODO: split above code to a function
     if not contents:
         raise RackspaceAutomationException(
             "Email addresses worksheet is empty.")

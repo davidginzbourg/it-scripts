@@ -28,6 +28,7 @@ get_violating_instances
 main
 send_warnings
 shelve
+'''
 
 class OsEnvVarsTest(unittest.TestCase):
     """Tests os environment variables check.
