@@ -1,6 +1,8 @@
 import unittest
+
 import mock
 from mock import MagicMock
+
 import rackspace_automation
 
 '''
@@ -141,4 +143,4 @@ class FetchConfigurationsTests(unittest.TestCase):
         mock_sheet.worksheet.return_value = mock_worksheet
         mock_worksheet.get_all_records.return_value = contents
 
-        self.ass
+        # self.ass
