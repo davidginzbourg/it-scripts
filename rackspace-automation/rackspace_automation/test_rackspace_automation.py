@@ -3,7 +3,7 @@ import unittest
 import mock
 from mock import MagicMock
 
-from rackspace_automation import rackspace_automation
+import rackspace_automation
 
 '''
 List of rackspace_automation functions:
