@@ -364,6 +364,18 @@ def fetch_configuration(spreadsheet_creds):
             EMAIL_ADDRESSES: fetch_email_addresses(spreadsheet_creds)}
 
 
+def get_worksheet_contents(spreadsheet_creds, worksheet_name):
+    """
+    :param spreadsheet_creds: GSpread crednetials.
+    :param worksheet_name:  worksheet name.
+    :return: the contents of the worksheet (using get_all_records() func).
+    """
+    gc = gspread.authorize(spreadsheet_creds)
+    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(
+        worksheet_name)
+    return sheet.get_all_records()
+
+
 def fetch_instance_settings(spreadsheet_creds):
     """Returns the instance settings.
 
@@ -415,11 +427,8 @@ def fetch_instance_settings(spreadsheet_creds):
             'delete_shelved_threshold': delete_shelved_threshold}
 
     instance_settings = {}
-    gc = gspread.authorize(spreadsheet_creds)
-    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(
-        INSTANCE_SETTINGS_WORKSHEET)
-    contents = sheet.get_all_records()
-    # TODO: split above code to a function
+    contents = get_worksheet_contents(spreadsheet_creds,
+                                      INSTANCE_SETTINGS_WORKSHEET)
     if not contents:
         return {}
     for row_dict in contents:
@@ -441,10 +450,7 @@ def fetch_global_settings(spreadsheet_creds):
     :return: global settings of the program.
     :rtype: TimeThresholdSettings
     """
-    gc = gspread.authorize(spreadsheet_creds)
-    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(SETTINGS_WORKSHEET)
-    contents = sheet.get_all_records()
-    # TODO: split above code to a function
+    contents = get_worksheet_contents(spreadsheet_creds, SETTINGS_WORKSHEET)
     if not contents:
         raise RackspaceAutomationException("Settings worksheet is empty.")
     return TimeThresholdSettings(**contents[0])
@@ -457,10 +463,8 @@ def fetch_email_addresses(spreadsheet_creds):
     :return: global settings of the program.
     :rtype: TimeThresholdSettings
     """
-    gc = gspread.authorize(spreadsheet_creds)
-    sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(EMAIL_ADDRESSES_WORKSHEET)
-    contents = sheet.get_all_records()
-    # TODO: split above code to a function
+    contents = get_worksheet_contents(spreadsheet_creds,
+                                      EMAIL_ADDRESSES_WORKSHEET)
     if not contents:
         raise RackspaceAutomationException(
             "Email addresses worksheet is empty.")
