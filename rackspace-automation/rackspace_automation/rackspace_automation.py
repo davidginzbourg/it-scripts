@@ -450,9 +450,21 @@ def fetch_global_settings(spreadsheet_creds):
     :return: global settings of the program.
     :rtype: TimeThresholdSettings
     """
+
+    def validate_row(row):
+        if 'shelve_running_warning_threshold' not in row \
+                or 'shelve_stopped_warning_threshold' not in row \
+                or 'delete_warning_threshold' not in row \
+                or 'shelve_running_threshold' not in row \
+                or 'shelve_stopped_threshold' not in row \
+                or 'delete_shelved_threshold' not in row:
+            raise RackspaceAutomationException("Invalid global threshold "
+                                               "settings.")
+
     contents = get_worksheet_contents(spreadsheet_creds, SETTINGS_WORKSHEET)
     if not contents:
         raise RackspaceAutomationException("Settings worksheet is empty.")
+    validate_row(contents[0])
     return TimeThresholdSettings(**contents[0])
 
 
@@ -462,12 +474,14 @@ def fetch_email_addresses(spreadsheet_creds):
     :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: email addresses that are setup for each tenant.
     """
+
     def validate_row(row):
         if TENANT_NAME not in row or EMAIL_ADDRESS not in row:
             raise RackspaceAutomationException("{} is not in the row "
                                                "content, probably worksheet "
                                                "headers are setup "
                                                "incorrectly.")
+
     contents = get_worksheet_contents(spreadsheet_creds,
                                       EMAIL_ADDRESSES_WORKSHEET)
     if not contents:
