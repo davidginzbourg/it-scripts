@@ -206,45 +206,51 @@ class FetchConfigurationsTests(unittest.TestCase):
         inst1 = 'inst1'
         inst_set1 = {rackspace_automation.INSTANCE_NAME: inst1,
                      'shelve_running_warning_threshold':
-                         0,
+                         '',
                      'shelve_stopped_warning_threshold':
-                         1,
-                     'delete_warning_threshold': 2,
-                     'shelve_running_threshold': 3,
-                     'shelve_stopped_threshold': 4,
-                     'delete_shelved_threshold': 5}
+                         1.0,
+                     'delete_warning_threshold': 2.0,
+                     'shelve_running_threshold': 3.0,
+                     'shelve_stopped_threshold': 4.0,
+                     'delete_shelved_threshold': 5.0}
         inst2 = 'inst2'
         inst_set2 = {rackspace_automation.INSTANCE_NAME: inst2,
                      'shelve_running_warning_threshold':
-                         10,
+                         10.0,
                      'shelve_stopped_warning_threshold':
-                         11,
-                     'delete_warning_threshold': 12,
-                     'shelve_running_threshold': 13,
-                     'shelve_stopped_threshold': 14,
-                     'delete_shelved_threshold': 15}
+                         11.0,
+                     'delete_warning_threshold': 12.0,
+                     'shelve_running_threshold': 13.0,
+                     'shelve_stopped_threshold': 14.0,
+                     'delete_shelved_threshold': 15.0}
         inst3 = 'inst3'
         inst_set3 = {rackspace_automation.INSTANCE_NAME: inst3,
                      'shelve_running_warning_threshold':
-                         110,
+                         110.0,
                      'shelve_stopped_warning_threshold':
-                         111,
-                     'delete_warning_threshold': 112,
-                     'shelve_running_threshold': 113,
-                     'shelve_stopped_threshold': 114,
-                     'delete_shelved_threshold': 115}
+                         111.0,
+                     'delete_warning_threshold': 112.0,
+                     'shelve_running_threshold': 113.0,
+                     'shelve_stopped_threshold': 114.0,
+                     'delete_shelved_threshold': 115.0}
         project1 = 'project1'
         project2 = 'project2'
-        row1 = {rackspace_automation.PROJECT_NAME: project1}.update(inst_set1)
-        row2 = {rackspace_automation.PROJECT_NAME: project2}.update(inst_set2)
-        row3 = {rackspace_automation.PROJECT_NAME: project1}.update(inst_set3)
+        row1 = {rackspace_automation.PROJECT_NAME: project1}
+        row1.update(inst_set1)
+        row2 = {rackspace_automation.PROJECT_NAME: project2}
+        row2.update(inst_set2)
+        row3 = {rackspace_automation.PROJECT_NAME: project1}
+        row3.update(inst_set3)
         contents.extend([row1, row2, row3])
+
+        result = rackspace_automation.fetch_instance_settings(None)
 
         # This must be done in order to successfully do the double
         # 'dereference'
         for inst in [inst_set1, inst_set2, inst_set3]:
             del inst[rackspace_automation.INSTANCE_NAME]
 
+        inst_set1['shelve_running_warning_threshold'] = float('inf')
         correct_result = {
             project1: {
                 inst1: rackspace_automation.TimeThresholdSettings(**inst_set1),
@@ -255,6 +261,5 @@ class FetchConfigurationsTests(unittest.TestCase):
             }
         }
 
-        result = rackspace_automation.fetch_instance_settings(None)
         self.assertDictEqual(result, correct_result, "Result dict isn't "
                                                      "correct.")
