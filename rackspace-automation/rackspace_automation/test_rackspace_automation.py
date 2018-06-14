@@ -171,11 +171,11 @@ class FetchConfigurationsTests(unittest.TestCase):
         contents = []
         mock_contents.return_value = contents
         self.assertRaises(glb_exc_class,
-                          rackspace_automation.fetch_global_settings(None))
+                          rackspace_automation.fetch_global_settings, None)
 
         contents.extend([{'random_key': 'random_val'}])
         self.assertRaises(glb_exc_class,
-                          rackspace_automation.fetch_email_addresses(None))
+                          rackspace_automation.fetch_global_settings, None)
         del contents[:]
 
         val1 = 'val1'
@@ -192,4 +192,3 @@ class FetchConfigurationsTests(unittest.TestCase):
                           'delete_shelved_threshold': val6}])
         rackspace_automation.fetch_global_settings(None)
         mock_ttsettings.assert_called_with(**contents[0])
-       
