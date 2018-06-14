@@ -149,6 +149,20 @@ class TimeThresholdSettings:
                                datetime.timedelta(seconds=threshold)
         return updated_at - expiration_threshold <= datetime.timedelta(0)
 
+    def __eq__(self, other):
+        return self.shelve_running_warning_threshold == \
+               other.shelve_running_warning_threshold \
+               and self.shelve_stopped_warning_threshold == \
+                   other.shelve_stopped_warning_threshold \
+               and self.delete_warning_threshold == \
+                   other.delete_warning_threshold \
+               and self.shelve_running_threshold == \
+                   other.shelve_running_threshold \
+               and self.shelve_stopped_threshold == \
+                   other.shelve_stopped_threshold \
+               and self.delete_shelved_threshold == \
+                   other.delete_shelved_threshold
+
 
 class InstanceDecorator:
     """A decorator for the novaclient instances.
