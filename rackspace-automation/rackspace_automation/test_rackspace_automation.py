@@ -132,7 +132,6 @@ class FetchConfigurationsTests(unittest.TestCase):
                          some_email_addr,
                          'Email Addresses value is incorrect')
 
-    @mock.patch('os.environ', os_environ)
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_email_addresses(self, mock_contents):
         """Tests the fetch_email_addresses function.
@@ -163,4 +162,34 @@ class FetchConfigurationsTests(unittest.TestCase):
                                                   'not found')
         self.assertEqual(result[tenant2], email2, 'first email address was '
                                                   'not found')
+
+    @mock.patch('rackspace_automation.TimeThresholdSettings')
+    @mock.patch('rackspace_automation.get_worksheet_contents')
+    def test_fetch_global_settings(self, mock_contents, mock_ttsettings):
+        """Tests the fetch_global_settings function.
+        """
+        contents = []
+        mock_contents.return_value = contents
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.fetch_global_settings(None))
+
+        contents.extend([{'random_key': 'random_val'}])
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.fetch_email_addresses(None))
         del contents[:]
+
+        val1 = 'val1'
+        val2 = 'val2'
+        val3 = 'val3'
+        val4 = 'val4'
+        val5 = 'val5'
+        val6 = 'val6'
+        contents.extend([{'shelve_running_warning_threshold': val1,
+                          'shelve_stopped_warning_threshold': val2,
+                          'delete_warning_threshold': val3,
+                          'shelve_running_threshold': val4,
+                          'shelve_stopped_threshold': val5,
+                          'delete_shelved_threshold': val6}])
+        rackspace_automation.fetch_global_settings(None)
+        mock_ttsettings.assert_called_with(**contents[0])
+        
