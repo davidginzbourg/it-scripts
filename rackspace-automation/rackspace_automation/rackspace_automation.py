@@ -462,6 +462,12 @@ def fetch_email_addresses(spreadsheet_creds):
     :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: email addresses that are setup for each tenant.
     """
+    def validate_row(row):
+        if TENANT_NAME not in row or EMAIL_ADDRESS not in row:
+            raise RackspaceAutomationException("{} is not in the row "
+                                               "content, probably worksheet "
+                                               "headers are setup "
+                                               "incorrectly.")
     contents = get_worksheet_contents(spreadsheet_creds,
                                       EMAIL_ADDRESSES_WORKSHEET)
     if not contents:
@@ -469,6 +475,7 @@ def fetch_email_addresses(spreadsheet_creds):
             "Email addresses worksheet is empty.")
     email_addresses = {}
     for row in contents:
+        validate_row(row)
         email_addresses[row[TENANT_NAME]] = row[EMAIL_ADDRESS]
     return email_addresses
 
