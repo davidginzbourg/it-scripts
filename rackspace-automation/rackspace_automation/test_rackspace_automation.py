@@ -143,18 +143,19 @@ class FetchConfigurationsTests(unittest.TestCase):
         self.assertRaises(glb_exc_class,
                           rackspace_automation.fetch_email_addresses, None)
 
-        contents = [{'random_key': 'random_val'}]
+        contents.extend([{'random_key': 'random_val'}])
         self.assertRaises(glb_exc_class,
                           rackspace_automation.fetch_email_addresses, None)
+        del contents[:]
 
         tenant1 = 'tenant1'
         tenant2 = 'tenant2'
         email1 = 'email1'
         email2 = 'email2'
-        contents = [{rackspace_automation.TENANT_NAME: tenant1,
-                     rackspace_automation.EMAIL_ADDRESS: email1},
-                    {rackspace_automation.TENANT_NAME: tenant2,
-                     rackspace_automation.EMAIL_ADDRESS: email2}]
+        contents.extend([{rackspace_automation.TENANT_NAME: tenant1,
+                          rackspace_automation.EMAIL_ADDRESS: email1},
+                         {rackspace_automation.TENANT_NAME: tenant2,
+                          rackspace_automation.EMAIL_ADDRESS: email2}])
         result = rackspace_automation.fetch_email_addresses(None)
         self.assertIn(tenant1, result, "tenant1 doesn't appear in the result")
         self.assertIn(tenant2, result, "tenant2 doesn't appear in the result")
@@ -162,3 +163,4 @@ class FetchConfigurationsTests(unittest.TestCase):
                                                   'not found')
         self.assertEqual(result[tenant2], email2, 'first email address was '
                                                   'not found')
+        del contents[:]
