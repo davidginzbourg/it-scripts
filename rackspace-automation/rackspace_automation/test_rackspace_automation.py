@@ -240,4 +240,21 @@ class FetchConfigurationsTests(unittest.TestCase):
         row3 = {rackspace_automation.PROJECT_NAME: project1}.update(inst_set3)
         contents.extend([row1, row2, row3])
 
-        
+        # This must be done in order to successfully do the double
+        # 'dereference'
+        for inst in [inst_set1, inst_set2, inst_set3]:
+            del inst[rackspace_automation.INSTANCE_NAME]
+
+        correct_result = {
+            project1: {
+                inst1: rackspace_automation.TimeThresholdSettings(**inst_set1),
+                inst3: rackspace_automation.TimeThresholdSettings(**inst_set3)
+            },
+            project2: {
+                inst2: rackspace_automation.TimeThresholdSettings(**inst_set2)
+            }
+        }
+
+        result = rackspace_automation.fetch_instance_settings(None)
+        self.assertDictEqual(result, correct_result, "Result dict isn't "
+                                                     "correct.")
