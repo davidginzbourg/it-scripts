@@ -192,4 +192,4 @@ class FetchConfigurationsTests(unittest.TestCase):
                           'delete_shelved_threshold': val6}])
         rackspace_automation.fetch_global_settings(None)
         mock_ttsettings.assert_called_with(**contents[0])
-        
+       
