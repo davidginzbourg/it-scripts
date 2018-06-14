@@ -35,72 +35,10 @@ shelve
 glb_exc_class = rackspace_automation.RackspaceAutomationException
 
 
-class OsEnvVarsTest(unittest.TestCase):
-    """Tests os environment variables check.
-    """
-
-    def test_all_os_vars(self):
-        """Tests that all os variables are checked.
-        """
-        os_environ_dict = {}
-        magic_mock = MagicMock()
-        magic_mock.mock.dict('os.environ', os_environ_dict)
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SOURCE_EMAIL_ADDRESS'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['CREDENTIALS_FILE_PATH'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SPREADSHEET_ID'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SETTINGS_WORKSHEET'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['EMAIL_ADDRESSES_WORKSHEET'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['INSTANCE_SETTINGS_WORKSHEET'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_MAIN_PROJECT'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_URL'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_USERNAME'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_PASSWORD'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-        os_environ_dict['DEFAULT_NOTIFICATION_EMAIL_ADDRESS'] = 'something'
-        self.assertRaises(glb_exc_class,
-                          rackspace_automation.check_os_environ_vars)
-
-
 class FetchConfigurationsTests(unittest.TestCase):
     """Fetch configurations test cases.
     """
-    os_environ = {
-        'SOURCE_EMAIL_ADDRESS': 'value_source_email_address',
-        'CREDENTIALS_FILE_PATH': 'value_credentials_file_path',
-        'SPREADSHEET_ID': 'value_spreadsheet_id',
-        'SETTINGS_WORKSHEET': 'value_settings_worksheet',
-        'EMAIL_ADDRESSES_WORKSHEET': 'value_email_addresses_worksheet',
-        'INSTANCE_SETTINGS_WORKSHEET': 'value_instance_settings_worksheet',
-        'OPENSTACK_MAIN_PROJECT': 'value_openstack_main_project',
-        'OPENSTACK_URL': 'value_openstack_url',
-        'OPENSTACK_USERNAME': 'value_openstack_username',
-        'OPENSTACK_PASSWORD': 'value_openstack_password',
-        'DEFAULT_NOTIFICATION_EMAIL_ADDRESS':
-            'value_default_notification_email_address'
-    }
 
-    @mock.patch('os.environ', os_environ)
     @mock.patch('rackspace_automation.fetch_email_addresses')
     @mock.patch('rackspace_automation.fetch_global_settings')
     @mock.patch('rackspace_automation.fetch_instance_settings')
@@ -263,3 +201,177 @@ class FetchConfigurationsTests(unittest.TestCase):
 
         self.assertDictEqual(result, correct_result, "Result dict isn't "
                                                      "correct.")
+
+
+class TestTimeThresholdSettings(unittest.TestCase):
+    def test_should_shelve_warn(self):
+        pass
+
+    def test_should_delete_warn(self):
+        pass
+
+    def test_should_shelve(self):
+        pass
+
+    def test_should_delete(self):
+        pass
+
+    def test_is_above_threshold(self):
+        pass
+
+
+class TestInstanceDecorator(unittest.TestCase):
+    def test_name(self):
+        pass
+
+    def test_status(self):
+        pass
+
+    def test_running_since(self):
+        pass
+
+    def test_stopped_since(self):
+        pass
+
+    def test_shelved_since(self):
+        pass
+
+
+class TestGeneral(unittest.TestCase):
+    def __init__(self, methodName='runTest'):
+        unittest.TestCase.__init__(self, methodName)
+        self.os_environ = {
+            'SOURCE_EMAIL_ADDRESS': 'value_source_email_address',
+            'CREDENTIALS_FILE_PATH': 'value_credentials_file_path',
+            'SPREADSHEET_ID': 'value_spreadsheet_id',
+            'SETTINGS_WORKSHEET': 'value_settings_worksheet',
+            'EMAIL_ADDRESSES_WORKSHEET': 'value_email_addresses_worksheet',
+            'INSTANCE_SETTINGS_WORKSHEET': 'value_instance_settings_worksheet',
+            'OPENSTACK_MAIN_PROJECT': 'value_openstack_main_project',
+            'OPENSTACK_URL': 'value_openstack_url',
+            'OPENSTACK_USERNAME': 'value_openstack_username',
+            'OPENSTACK_PASSWORD': 'value_openstack_password',
+            'DEFAULT_NOTIFICATION_EMAIL_ADDRESS':
+                'value_default_notification_email_address'
+        }
+        rackspace_automation.SOURCE_EMAIL_ADDRESS = self.os_environ[
+            'SOURCE_EMAIL_ADDRESS']
+        rackspace_automation.CREDENTIALS_FILE_PATH = self.os_environ[
+            'CREDENTIALS_FILE_PATH']
+        rackspace_automation.SPREADSHEET_ID = self.os_environ[
+            'SPREADSHEET_ID']
+        rackspace_automation.SETTINGS_WORKSHEET = self.os_environ[
+            'SETTINGS_WORKSHEET']
+        rackspace_automation.EMAIL_ADDRESSES_WORKSHEET = self.os_environ[
+            'EMAIL_ADDRESSES_WORKSHEET']
+        rackspace_automation.INSTANCE_SETTINGS_WORKSHEET = self.os_environ[
+            'INSTANCE_SETTINGS_WORKSHEET']
+        rackspace_automation.OPENSTACK_MAIN_PROJECT = self.os_environ[
+            'OPENSTACK_MAIN_PROJECT']
+        rackspace_automation.OPENSTACK_URL = self.os_environ[
+            'OPENSTACK_URL']
+        rackspace_automation.OPENSTACK_USERNAME = self.os_environ[
+            'OPENSTACK_USERNAME']
+        rackspace_automation.OPENSTACK_PASSWORD = self.os_environ[
+            'OPENSTACK_PASSWORD']
+        rackspace_automation.DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
+            self.os_environ['DEFAULT_NOTIFICATION_EMAIL_ADDRESS']
+
+    def test_get_transition(self):
+        pass
+
+    def test_get_verdict(self):
+        pass
+
+    def test_get_violating_instances(self):
+        pass
+
+    def test_get_tenant_names(self):
+        pass
+
+    def test_get_worksheet_contents(self):
+        pass
+
+    @mock.patch('keystoneauth1.session.Session')
+    @mock.patch('keystoneauth1.identity.v3.Password')
+    def test_get_credentials(self, mock_v3_pw, mock_session):
+        """Tests get_credentials.
+        """
+        url = self.os_environ['OPENSTACK_URL']
+        username = self.os_environ['OPENSTACK_USERNAME']
+        password = self.os_environ['OPENSTACK_PASSWORD']
+        project = '_project'
+        call_params = {
+            'auth_url': url,
+            'username': username,
+            'password': password,
+            'user_domain_name': 'Default',
+            'project_name': project,
+            'project_domain_name': 'Default'}
+        auth = 'auth'
+        mock_v3_pw.return_value = auth
+
+        rackspace_automation.get_credentials(project)
+
+        mock_v3_pw.assert_called_with(**call_params)
+        mock_session.assert_called_with(**{auth: auth})
+
+    def test_get_spreadsheet_creds(self):
+        pass
+
+    def test_send_warnings(self):
+        pass
+
+    def test_delete_instances(self):
+        pass
+
+    def test_shelve(self):
+        pass
+
+    def test_add_missing_tenant_email_addresses(self):
+        pass
+
+    def test_all_os_vars(self):
+        """Tests that all os variables are checked.
+        """
+        os_environ_dict = {}
+        magic_mock = MagicMock()
+        magic_mock.mock.dict('os.environ', os_environ_dict)
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['SOURCE_EMAIL_ADDRESS'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['CREDENTIALS_FILE_PATH'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['SPREADSHEET_ID'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['SETTINGS_WORKSHEET'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['EMAIL_ADDRESSES_WORKSHEET'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['INSTANCE_SETTINGS_WORKSHEET'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['OPENSTACK_MAIN_PROJECT'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['OPENSTACK_URL'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['OPENSTACK_USERNAME'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['OPENSTACK_PASSWORD'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+        os_environ_dict['DEFAULT_NOTIFICATION_EMAIL_ADDRESS'] = 'something'
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.check_os_environ_vars)
+
+    def test_main(self):
+        pass
