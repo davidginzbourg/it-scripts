@@ -460,8 +460,7 @@ def fetch_email_addresses(spreadsheet_creds):
     """Returns the tenant's notification email addresses from the Spreadsheet.
 
     :param spreadsheet_creds: Google Spreadsheet credentials.
-    :return: global settings of the program.
-    :rtype: TimeThresholdSettings
+    :return: email addresses that are setup for each tenant.
     """
     contents = get_worksheet_contents(spreadsheet_creds,
                                       EMAIL_ADDRESSES_WORKSHEET)

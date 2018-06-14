@@ -32,6 +32,9 @@ send_warnings
 shelve
 '''
 
+glb_exc_class = rackspace_automation.RackspaceAutomationException
+
+
 class OsEnvVarsTest(unittest.TestCase):
     """Tests os environment variables check.
     """
@@ -42,40 +45,40 @@ class OsEnvVarsTest(unittest.TestCase):
         os_environ_dict = {}
         magic_mock = MagicMock()
         magic_mock.mock.dict('os.environ', os_environ_dict)
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['SOURCE_EMAIL_ADDRESS'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['CREDENTIALS_FILE_PATH'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['SPREADSHEET_ID'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['SETTINGS_WORKSHEET'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['EMAIL_ADDRESSES_WORKSHEET'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['INSTANCE_SETTINGS_WORKSHEET'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['OPENSTACK_MAIN_PROJECT'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['OPENSTACK_URL'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['OPENSTACK_USERNAME'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['OPENSTACK_PASSWORD'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
         os_environ_dict['DEFAULT_NOTIFICATION_EMAIL_ADDRESS'] = 'something'
-        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+        self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
 
 
@@ -130,17 +133,32 @@ class FetchConfigurationsTests(unittest.TestCase):
                          'Email Addresses value is incorrect')
 
     @mock.patch('os.environ', os_environ)
-    @mock.patch('gspread.authorize')
-    def test_fetch_email_addresses(self, mock_gspread_authorize):
+    @mock.patch('rackspace_automation.get_worksheet_contents')
+    def test_fetch_email_addresses(self, mock_contents):
         """Tests the fetch_email_addresses function.
         """
-        contents = {}
-        mock_gclient = MagicMock()
-        mock_sheet = MagicMock()
-        mock_worksheet = MagicMock()
-        mock_gspread_authorize.return_value = mock_gclient
-        mock_gclient.open_by_key.return_value = mock_sheet
-        mock_sheet.worksheet.return_value = mock_worksheet
-        mock_worksheet.get_all_records.return_value = contents
+        contents = []
+        mock_contents.return_value = contents
 
-        # self.ass
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.fetch_email_addresses, None)
+
+        contents = [{'random_key': 'random_val'}]
+        self.assertRaises(glb_exc_class,
+                          rackspace_automation.fetch_email_addresses, None)
+
+        tenant1 = 'tenant1'
+        tenant2 = 'tenant2'
+        email1 = 'email1'
+        email2 = 'email2'
+        contents = [{rackspace_automation.TENANT_NAME: tenant1,
+                     rackspace_automation.EMAIL_ADDRESS: email1},
+                    {rackspace_automation.TENANT_NAME: tenant2,
+                     rackspace_automation.EMAIL_ADDRESS: email2}]
+        result = rackspace_automation.fetch_email_addresses(None)
+        self.assertIn(tenant1, result, "tenant1 doesn't appear in the result")
+        self.assertIn(tenant2, result, "tenant2 doesn't appear in the result")
+        self.assertEqual(result[tenant1], email1, 'first email address was '
+                                                  'not found')
+        self.assertEqual(result[tenant2], email2, 'first email address was '
+                                                  'not found')
