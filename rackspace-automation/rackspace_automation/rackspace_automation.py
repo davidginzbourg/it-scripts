@@ -216,6 +216,8 @@ class InstanceDecorator:
             # First one to cause it to transition to a running state.
             if trans == StateTransition.TO_RUNNING:
                 return action.start_time
+        # Assume that the action log is corrupt and therefore no action should
+        # be taken
         return str(datetime.datetime.max)
 
     def stopped_since(self):
@@ -226,6 +228,8 @@ class InstanceDecorator:
             # First one to cause it to transition to a stopped state.
             if trans == StateTransition.TO_STOPPED:
                 return action.start_time
+        # Assume that the action log is corrupt and therefore no action should
+        # be taken
         return str(datetime.datetime.max)
 
     def shelved_since(self):
@@ -236,6 +240,8 @@ class InstanceDecorator:
             # First one to cause it to transition to a shelved state.
             if trans == StateTransition.TO_SHELVED:
                 return action.start_time
+        # Assume that the action log is corrupt and therefore no action should
+        # be taken
         return str(datetime.datetime.max)
 
     def __str__(self):
