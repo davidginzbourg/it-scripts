@@ -222,9 +222,31 @@ class TestTimeThresholdSettings(unittest.TestCase):
                 now_year, now_month, now_day - 3).isoformat())
         self.assertTrue(tts.should_delete(mock_inst_dec))
 
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_is_above_threshold(self, mock_utcnow):
+        now_year = 2000
+        now_month = 1
+        now_day = 10
+        mock_utcnow.return_value = dt.datetime(now_year, now_month, now_day)
+        threshold_days = 4
+        threshold_seconds = threshold_days * SECONDS_TO_DAYS
+        is_above_threshold = rackspace_automation.TimeThresholdSettings \
+            .is_above_threshold
 
-def test_is_above_threshold(self):
-    pass
+        time = dt.datetime(now_year, now_month, now_day).isoformat()
+        self.assertFalse(is_above_threshold(time, threshold_seconds))
+
+        time = dt.datetime(
+            now_year, now_month, now_day - (threshold_days // 2)).isoformat()
+        self.assertFalse(is_above_threshold(time, threshold_seconds))
+
+        time = dt.datetime(
+            now_year, now_month, now_day - (2 * threshold_days)).isoformat()
+        self.assertTrue(is_above_threshold(time, threshold_seconds))
+
+        time = dt.datetime(
+            now_year, now_month, now_day - threshold_days).isoformat()
+        self.assertTrue(is_above_threshold(time, threshold_seconds))
 
 
 class TestInstanceDecorator(unittest.TestCase):
