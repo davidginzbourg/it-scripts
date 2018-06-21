@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 
 import mock
 from mock import MagicMock
@@ -36,6 +37,25 @@ glb_exc_class = rackspace_automation.RackspaceAutomationException
 
 
 class TestTimeThresholdSettings(unittest.TestCase):
+    def test_init(self):
+        early_date = [2000, 1, 1]
+        late_date = [2001, 1, 1]
+
+        args = [datetime(*early_date), datetime(*late_date),
+                datetime(*early_date), datetime(*late_date),
+                datetime(*early_date), datetime(*late_date)]
+
+        for i in range(0, len(args), 2):
+            args[i] = datetime(*late_date)
+            args[i + 1] = datetime(*early_date)
+            self.assertRaises(glb_exc_class,
+                              rackspace_automation.TimeThresholdSettings,
+                              *args)
+            args[i] = datetime(*early_date)
+            args[i + 1] = datetime(*late_date)
+            # Should not raise an error
+            rackspace_automation.TimeThresholdSettings(*args)
+
     def test_should_shelve_warn(self):
         pass
 
