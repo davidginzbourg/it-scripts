@@ -96,7 +96,7 @@ class TimeThresholdSettings:
         if srwt > srt or sswt > sst or dwt > dst:
             raise RackspaceAutomationException("One or more warning "
                                                "thresholds is greater than "
-                                               "the it's action threshold")
+                                               "the it's action threshold.")
         self.shelve_running_warning_threshold = \
             shelve_running_warning_threshold
         self.shelve_stopped_warning_threshold = \
