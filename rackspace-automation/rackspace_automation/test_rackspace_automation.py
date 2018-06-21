@@ -56,6 +56,18 @@ class MockInstDec():
         return self._shelved_since
 
 
+class MockInstDecNova():
+    def __init__(self, instance_actions):
+        self._instance_actions = instance_actions
+
+    @property
+    def instance_action(self):
+        return self
+
+    def list(self, *args):
+        return self._instance_actions
+
+
 class TestTimeThresholdSettings(unittest.TestCase):
     def test_init(self):
         # warning, action, w, a, w, a
@@ -251,7 +263,12 @@ class TestTimeThresholdSettings(unittest.TestCase):
 
 class TestInstanceDecorator(unittest.TestCase):
     def test_name(self):
-        pass
+        InstanceDecorator = rackspace_automation.InstanceDecorator
+        instance = MagicMock()
+        instance.name = 'name'
+        inst_dec = InstanceDecorator(instance, MockInstDecNova([]))
+        name = inst_dec.name
+        self.assertEqual(name, 'name')
 
     def test_status(self):
         pass
