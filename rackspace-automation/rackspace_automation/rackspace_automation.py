@@ -1,4 +1,5 @@
 import os
+import logging
 import datetime
 import dateutil.parser
 
@@ -10,6 +11,7 @@ from novaclient import client as novaclient
 from keystoneclient.v3 import client as keystoneclient
 from oauth2client.service_account import ServiceAccountCredentials
 
+logging.getLogger('botocore').setLevel(logging.INFO)
 ses_client = boto3.client('ses', region_name='eu-west-1')
 
 INSTANCE_SETTINGS = 'instance_settings'
