@@ -271,7 +271,12 @@ class TestInstanceDecorator(unittest.TestCase):
         self.assertEqual(name, 'name')
 
     def test_status(self):
-        pass
+        InstanceDecorator = rackspace_automation.InstanceDecorator
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'cash me ousside')
+        inst_dec = InstanceDecorator(instance, MockInstDecNova([]))
+        status = inst_dec.status
+        self.assertEqual(status, 'cash me ousside')
 
     def test_running_since(self):
         pass
