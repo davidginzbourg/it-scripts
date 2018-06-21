@@ -66,21 +66,37 @@ class TimeThresholdSettings:
     """
 
     def __init__(self, shelve_running_warning_threshold,
-                 shelve_stopped_warning_threshold, delete_warning_threshold,
-                 shelve_running_threshold, shelve_stopped_threshold,
+                 shelve_running_threshold, shelve_stopped_warning_threshold,
+                 shelve_stopped_threshold, delete_warning_threshold,
                  delete_shelved_threshold):
         """Initializes a new configuration.
 
         :param shelve_running_warning_threshold: a warning threshold for
             shelving a running instance (seconds).
+        :param shelve_running_threshold: running time threshold (seconds).
         :param shelve_stopped_warning_threshold: a warning threshold for
             shelving a stopped instance (seconds).
+        :param shelve_stopped_threshold: stopped time threshold (seconds).
         :param delete_warning_threshold: a warning threshold for deletion
             (seconds).
-        :param shelve_running_threshold: running time threshold (seconds).
-        :param shelve_stopped_threshold: stopped time threshold (seconds).
         :param delete_shelved_threshold: shelved time threshold (seconds).
         """
+        srwt = dateutil.parser.parse(shelve_running_warning_threshold) \
+            .replace(tzinfo=None)
+        sswt = dateutil.parser.parse(shelve_stopped_warning_threshold) \
+            .replace(tzinfo=None)
+        dwt = dateutil.parser.parse(delete_warning_threshold) \
+            .replace(tzinfo=None)
+        srt = dateutil.parser.parse(shelve_running_threshold) \
+            .replace(tzinfo=None)
+        sst = dateutil.parser.parse(shelve_stopped_threshold) \
+            .replace(tzinfo=None)
+        dst = dateutil.parser.parse(delete_shelved_threshold) \
+            .replace(tzinfo=None)
+        if srwt > srt or sswt > sst or dwt > dst:
+            raise RackspaceAutomationException("One or more warning "
+                                               "thresholds is greater than "
+                                               "the it's action threshold")
         self.shelve_running_warning_threshold = \
             shelve_running_warning_threshold
         self.shelve_stopped_warning_threshold = \
@@ -155,15 +171,15 @@ class TimeThresholdSettings:
         return self.shelve_running_warning_threshold == \
                other.shelve_running_warning_threshold \
                and self.shelve_stopped_warning_threshold == \
-                   other.shelve_stopped_warning_threshold \
+               other.shelve_stopped_warning_threshold \
                and self.delete_warning_threshold == \
-                   other.delete_warning_threshold \
+               other.delete_warning_threshold \
                and self.shelve_running_threshold == \
-                   other.shelve_running_threshold \
+               other.shelve_running_threshold \
                and self.shelve_stopped_threshold == \
-                   other.shelve_stopped_threshold \
+               other.shelve_stopped_threshold \
                and self.delete_shelved_threshold == \
-                   other.delete_shelved_threshold
+               other.delete_shelved_threshold
 
 
 class InstanceDecorator:
