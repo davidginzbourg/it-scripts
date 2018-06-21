@@ -81,19 +81,9 @@ class TimeThresholdSettings:
             (seconds).
         :param delete_shelved_threshold: shelved time threshold (seconds).
         """
-        srwt = dateutil.parser.parse(shelve_running_warning_threshold) \
-            .replace(tzinfo=None)
-        sswt = dateutil.parser.parse(shelve_stopped_warning_threshold) \
-            .replace(tzinfo=None)
-        dwt = dateutil.parser.parse(delete_warning_threshold) \
-            .replace(tzinfo=None)
-        srt = dateutil.parser.parse(shelve_running_threshold) \
-            .replace(tzinfo=None)
-        sst = dateutil.parser.parse(shelve_stopped_threshold) \
-            .replace(tzinfo=None)
-        dst = dateutil.parser.parse(delete_shelved_threshold) \
-            .replace(tzinfo=None)
-        if srwt > srt or sswt > sst or dwt > dst:
+        if shelve_running_warning_threshold > shelve_running_threshold \
+                or shelve_stopped_warning_threshold > shelve_stopped_threshold \
+                or delete_warning_threshold > delete_shelved_threshold:
             raise RackspaceAutomationException("One or more warning "
                                                "thresholds is greater than "
                                                "the it's action threshold.")
@@ -163,8 +153,8 @@ class TimeThresholdSettings:
         if not time or not threshold:
             return False
         updated_at = dateutil.parser.parse(time).replace(tzinfo=None)
-        expiration_threshold = datetime.datetime.utcnow() - \
-                               datetime.timedelta(seconds=threshold)
+        expiration_threshold = datetime.datetime.utcnow() - datetime.timedelta(
+            seconds=threshold)
         return updated_at - expiration_threshold <= datetime.timedelta(0)
 
     def __eq__(self, other):
