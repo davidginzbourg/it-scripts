@@ -7,7 +7,7 @@ import numpy as np
 from mock import MagicMock
 
 import rackspace_automation
-from rackspace_automation import InstanceDecorator
+from rackspace_automation import InstanceDecorator, StateTransition
 
 '''
 List of rackspace_automation functions:
@@ -601,7 +601,18 @@ class TestGeneral(unittest.TestCase):
                                                      "correct.")
 
     def test_get_transition(self):
-        pass
+        to_running = 'create'
+        to_shelved = 'shelve'
+        to_stopped = 'suspend'
+        get_transition = rackspace_automation.get_transition
+        self.assertEqual(get_transition(to_running),
+                         StateTransition.TO_RUNNING)
+        self.assertEqual(get_transition(to_shelved),
+                         StateTransition.TO_SHELVED)
+        self.assertEqual(get_transition(to_stopped),
+                         StateTransition.TO_STOPPED)
+        self.assertEqual(get_transition('random_action'),
+                         StateTransition.NO_CHANGE)
 
     def test_get_verdict(self):
         pass
