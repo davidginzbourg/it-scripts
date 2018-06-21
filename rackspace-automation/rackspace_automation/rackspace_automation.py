@@ -61,6 +61,13 @@ class Verdict:
     DELETE, SHELVE, DELETE_WARN, SHELVE_WARN, DO_NOTHING = range(5)
 
 
+def get_utc_now():
+    """
+    :return: the time now, UTC.
+    """
+    return datetime.datetime.utcnow()
+
+
 class TimeThresholdSettings:
     """Represents some configuration of the settings.
     """
@@ -153,7 +160,7 @@ class TimeThresholdSettings:
         if not time or not threshold:
             return False
         updated_at = dateutil.parser.parse(time).replace(tzinfo=None)
-        expiration_threshold = datetime.datetime.utcnow() - datetime.timedelta(
+        expiration_threshold = get_utc_now() - datetime.timedelta(
             seconds=threshold)
         return updated_at - expiration_threshold <= datetime.timedelta(0)
 
