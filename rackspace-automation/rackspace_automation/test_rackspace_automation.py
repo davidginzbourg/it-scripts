@@ -7,6 +7,7 @@ import numpy as np
 from mock import MagicMock
 
 import rackspace_automation
+from rackspace_automation import InstanceDecorator
 
 '''
 List of rackspace_automation functions:
@@ -64,8 +65,19 @@ class MockInstDecNova():
     def instance_action(self):
         return self
 
-    def list(self, *args):
+    def list(self, _):
         return self._instance_actions
+
+
+class MockAction():
+    def __init__(self, action):
+        self._action = action
+
+    def action(self):
+        return self._action
+
+    def start_time(self):
+        return TestInstanceDecorator.fixed_test_date
 
 
 class TestTimeThresholdSettings(unittest.TestCase):
@@ -262,24 +274,54 @@ class TestTimeThresholdSettings(unittest.TestCase):
 
 
 class TestInstanceDecorator(unittest.TestCase):
+    """
+    Action Transition table:
+        to_running = {'create', 'rebuild', 'resume', 'os-start', 'unpause',
+                  'unshelve'}
+        to_shelved = {'shelve', 'shelveOffload'}
+        to_stopped = {'pause', 'os-stop', 'suspend'}
+    """
+    max_datetime = str(dt.datetime.max)
+    fixed_test_date = dt.datetime(1990, 1, 1).isoformat()
+
     def test_name(self):
-        InstanceDecorator = rackspace_automation.InstanceDecorator
         instance = MagicMock()
         instance.name = 'name'
         inst_dec = InstanceDecorator(instance, MockInstDecNova([]))
         name = inst_dec.name
+
         self.assertEqual(name, 'name')
 
     def test_status(self):
-        InstanceDecorator = rackspace_automation.InstanceDecorator
         instance = MagicMock()
         setattr(instance, 'OS-EXT-STS:vm_state', 'cash me ousside')
         inst_dec = InstanceDecorator(instance, MockInstDecNova([]))
         status = inst_dec.status
+
         self.assertEqual(status, 'cash me ousside')
 
-    def test_running_since(self):
-        pass
+    def test_running_since_no_actions_log(self):
+        inst_dec = InstanceDecorator(None, MockInstDecNova([]))
+
+        self.assertIsNone(inst_dec.running_since())
+
+    def test_running_since_wrong_server_status(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'random_status')
+
+        actions_log = [MockAction('random_action')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertIsNone(inst_dec.running_since())
+
+    def test_running_since_no_corresponding_action(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+
+        actions_log = [MockAction('shelve')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertEqual(inst_dec.running_since(), self.max_datetime)
 
     def test_stopped_since(self):
         pass
