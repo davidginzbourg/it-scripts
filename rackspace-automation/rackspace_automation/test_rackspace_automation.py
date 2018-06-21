@@ -38,6 +38,23 @@ SECONDS_TO_DAYS = 86400
 glb_exc_class = rackspace_automation.RackspaceAutomationException
 
 
+class MockInstDec():
+    def __init__(self, running_since=None, stopped_since=None,
+                 shelved_since=None):
+        self._running_since = running_since
+        self._stopped_since = stopped_since
+        self._shelved_since = shelved_since
+
+    def running_since(self):
+        return self._running_since
+
+    def stopped_since(self):
+        return self._stopped_since
+
+    def shelved_since(self):
+        return self._shelved_since
+
+
 class TestTimeThresholdSettings(unittest.TestCase):
     def test_init(self):
         # warning, action, w, a, w, a
@@ -66,43 +83,42 @@ class TestTimeThresholdSettings(unittest.TestCase):
             now_year, now_month, now_day)
 
         tts = rackspace_automation.TimeThresholdSettings(*args)
-        mock_inst_dec = MagicMock()
-        mock_inst_dec.running_since.return_value = None
-        mock_inst_dec.stopped_since.return_value = None
+        mock_inst_dec = MockInstDec()
         self.assertFalse(tts.should_shelve_warn(mock_inst_dec),
                          "Sent shelve warning when both "
                          "running\stopped_since() returned None.")
 
-        mock_inst_dec.running_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 1)
-        mock_inst_dec.stopped_since.return_value = None
+        mock_inst_dec = MockInstDec(
+            running_since=datetime.datetime(
+                now_year, now_month, now_day - 1).isoformat())
         self.assertFalse(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = None
-        mock_inst_dec.stopped_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 1)
+        mock_inst_dec = MockInstDec(stopped_since=datetime.datetime(
+            now_year, now_month, now_day - 1).isoformat())
         self.assertFalse(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 1)
-        mock_inst_dec.stopped_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 1)
+        mock_inst_dec = MockInstDec(
+            running_since=datetime.datetime(
+                now_year, now_month, now_day - 1).isoformat(),
+            stopped_since=datetime.datetime(
+                now_year, now_month, now_day - 1).isoformat())
         self.assertFalse(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 3)
-        mock_inst_dec.stopped_since.return_value = None
+        mock_inst_dec = MockInstDec(
+            running_since=datetime.datetime(
+                now_year, now_month, now_day - 3).isoformat())
         self.assertTrue(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = None
-        mock_inst_dec.stopped_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 3)
+        mock_inst_dec = MockInstDec(
+            stopped_since=datetime.datetime(
+                now_year, now_month, now_day - 3).isoformat())
         self.assertTrue(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 3)
-        mock_inst_dec.stopped_since.return_value = datetime.datetime(
-            now_year, now_month, now_day - 3)
+        mock_inst_dec = MockInstDec(
+            running_since=datetime.datetime(
+                now_year, now_month, now_day - 3).isoformat(),
+            stopped_since=datetime.datetime(
+                now_year, now_month, now_day - 3).isoformat())
         self.assertTrue(tts.should_shelve_warn(mock_inst_dec))
 
     def test_should_delete_warn(self):
