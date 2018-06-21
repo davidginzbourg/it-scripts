@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime
+import datetime
 
 import mock
 import numpy as np
@@ -54,7 +54,7 @@ class TestTimeThresholdSettings(unittest.TestCase):
             # Should not raise an error
             rackspace_automation.TimeThresholdSettings(*args)
 
-    @mock.patch('datetime.datetime.utcnow')
+    @mock.patch('datetime.datetime')
     def test_should_shelve_warn(self, mock_utcnow):
         # warning, action, w, a, w, a - in days (makes it easier to read the
         # dates
@@ -62,7 +62,8 @@ class TestTimeThresholdSettings(unittest.TestCase):
         now_year = 2000
         now_month = 1
         now_day = 10
-        mock_utcnow.return_value = datetime(now_year, now_month, now_day)
+        mock_utcnow.datetime.utcnow.return_value = datetime.datetime(
+            now_year, now_month, now_day)
 
         tts = rackspace_automation.TimeThresholdSettings(*args)
         mock_inst_dec = MagicMock()
@@ -72,35 +73,35 @@ class TestTimeThresholdSettings(unittest.TestCase):
                          "Sent shelve warning when both "
                          "running\stopped_since() returned None.")
 
-        mock_inst_dec.running_since.return_value = datetime(
+        mock_inst_dec.running_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 1)
         mock_inst_dec.stopped_since.return_value = None
         self.assertFalse(tts.should_shelve_warn(mock_inst_dec))
 
         mock_inst_dec.running_since.return_value = None
-        mock_inst_dec.stopped_since.return_value = datetime(
+        mock_inst_dec.stopped_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 1)
         self.assertFalse(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = datetime(
+        mock_inst_dec.running_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 1)
-        mock_inst_dec.stopped_since.return_value = datetime(
+        mock_inst_dec.stopped_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 1)
         self.assertFalse(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = datetime(
+        mock_inst_dec.running_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 3)
         mock_inst_dec.stopped_since.return_value = None
         self.assertTrue(tts.should_shelve_warn(mock_inst_dec))
 
         mock_inst_dec.running_since.return_value = None
-        mock_inst_dec.stopped_since.return_value = datetime(
+        mock_inst_dec.stopped_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 3)
         self.assertTrue(tts.should_shelve_warn(mock_inst_dec))
 
-        mock_inst_dec.running_since.return_value = datetime(
+        mock_inst_dec.running_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 3)
-        mock_inst_dec.stopped_since.return_value = datetime(
+        mock_inst_dec.stopped_since.return_value = datetime.datetime(
             now_year, now_month, now_day - 3)
         self.assertTrue(tts.should_shelve_warn(mock_inst_dec))
 
