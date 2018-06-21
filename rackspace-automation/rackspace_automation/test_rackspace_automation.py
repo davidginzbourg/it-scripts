@@ -276,13 +276,6 @@ class TestTimeThresholdSettings(unittest.TestCase):
 
 
 class TestInstanceDecorator(unittest.TestCase):
-    """
-    Action Transition table:
-        to_running = {'create', 'rebuild', 'resume', 'os-start', 'unpause',
-                  'unshelve'}
-        to_shelved = {'shelve', 'shelveOffload'}
-        to_stopped = {'pause', 'os-stop', 'suspend'}
-    """
     max_datetime = str(dt.datetime.max)
     fixed_test_date = dt.datetime(1990, 1, 1).isoformat()
 
@@ -335,11 +328,71 @@ class TestInstanceDecorator(unittest.TestCase):
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
         self.assertEqual(inst_dec.running_since(), self.fixed_test_date)
 
-    def test_stopped_since(self):
-        pass
+    def test_stopped_since_no_actions_log(self):
+        inst_dec = InstanceDecorator(None, MockInstDecNova([]))
 
-    def test_shelved_since(self):
-        pass
+        self.assertIsNone(inst_dec.stopped_since())
+
+    def test_stopped_since_wrong_server_status(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'random_status')
+
+        actions_log = [MockAction('random_action')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertIsNone(inst_dec.stopped_since())
+
+    def test_stopped_since_no_corresponding_action(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+
+        actions_log = [MockAction('unpause')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertEqual(inst_dec.stopped_since(), self.max_datetime)
+
+    def test_stopped_since_succeeds(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+
+        # Create transitions the instance into a running state.
+        actions_log = [MockAction('shelve'), MockAction('pause')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertEqual(inst_dec.stopped_since(), self.fixed_test_date)
+
+    def test_shelved_since_no_actions_log(self):
+        inst_dec = InstanceDecorator(None, MockInstDecNova([]))
+
+        self.assertIsNone(inst_dec.shelved_since())
+
+    def test_shelved_since_wrong_server_status(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'random_status')
+
+        actions_log = [MockAction('random_action')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertIsNone(inst_dec.shelved_since())
+
+    def test_shelved_since_no_corresponding_action(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
+
+        actions_log = [MockAction('unpause')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertEqual(inst_dec.shelved_since(), self.max_datetime)
+
+    def test_shelved_since_succeeds(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
+
+        # Create transitions the instance into a running state.
+        actions_log = [MockAction('pause'), MockAction('shelve')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertEqual(inst_dec.shelved_since(), self.fixed_test_date)
 
 
 class TestGeneral(unittest.TestCase):
