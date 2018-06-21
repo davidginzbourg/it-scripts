@@ -73,9 +73,11 @@ class MockAction():
     def __init__(self, action):
         self._action = action
 
+    @property
     def action(self):
         return self._action
 
+    @property
     def start_time(self):
         return TestInstanceDecorator.fixed_test_date
 
@@ -322,6 +324,16 @@ class TestInstanceDecorator(unittest.TestCase):
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
         self.assertEqual(inst_dec.running_since(), self.max_datetime)
+
+    def test_running_since_succeeds(self):
+        instance = MagicMock()
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+
+        # Create transitions the instance into a running state.
+        actions_log = [MockAction('shelve'), MockAction('create')]
+
+        inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
+        self.assertEqual(inst_dec.running_since(), self.fixed_test_date)
 
     def test_stopped_since(self):
         pass
