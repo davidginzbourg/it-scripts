@@ -202,7 +202,7 @@ class InstanceDecorator:
 
     @property
     def name(self):
-        return self.instance.human_id
+        return self.instance.name
 
     @property
     def status(self):
