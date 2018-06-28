@@ -593,7 +593,7 @@ class TestGeneral(unittest.TestCase):
                          "Fetch instance settings returned a non-empty dict.")
 
         inst1 = 'inst1'
-        inst_set1 = {rackspace_automation.INSTANCE_NAME: inst1,
+        inst_set1 = {rackspace_automation.INSTANCE_ID: inst1,
                      'shelve_running_warning_threshold':
                          '',
                      'shelve_stopped_warning_threshold':
@@ -603,7 +603,7 @@ class TestGeneral(unittest.TestCase):
                      'shelve_stopped_threshold': 4.0,
                      'delete_shelved_threshold': 5.0}
         inst2 = 'inst2'
-        inst_set2 = {rackspace_automation.INSTANCE_NAME: inst2,
+        inst_set2 = {rackspace_automation.INSTANCE_ID: inst2,
                      'shelve_running_warning_threshold':
                          10.0,
                      'shelve_stopped_warning_threshold':
@@ -613,7 +613,7 @@ class TestGeneral(unittest.TestCase):
                      'shelve_stopped_threshold': 14.0,
                      'delete_shelved_threshold': 15.0}
         inst3 = 'inst3'
-        inst_set3 = {rackspace_automation.INSTANCE_NAME: inst3,
+        inst_set3 = {rackspace_automation.INSTANCE_ID: inst3,
                      'shelve_running_warning_threshold':
                          110.0,
                      'shelve_stopped_warning_threshold':
@@ -637,7 +637,7 @@ class TestGeneral(unittest.TestCase):
         # This must be done in order to successfully do the double
         # 'dereference'
         for inst in [inst_set1, inst_set2, inst_set3]:
-            del inst[rackspace_automation.INSTANCE_NAME]
+            del inst[rackspace_automation.INSTANCE_ID]
 
         inst_set1['shelve_running_warning_threshold'] = float('inf')
         inst_set1['shelve_running_threshold'] = float('inf')
@@ -687,12 +687,12 @@ class TestGeneral(unittest.TestCase):
     def test_get_verdict_configuration_swap(self):
         project_name = 'project_name'
         inst_dec = MagicMock()
-        inst_dec.name = 'inst1'
+        inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
         instance_settings = {
             project_name: {
-                inst_dec.name: instance_time_settings}}
+                inst_dec.id: instance_time_settings}}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
@@ -707,12 +707,12 @@ class TestGeneral(unittest.TestCase):
     def test_get_verdict_shelves(self):
         project_name = 'project_name'
         inst_dec = MagicMock()
-        inst_dec.name = 'inst1'
+        inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
         instance_settings = {
             project_name: {
-                inst_dec.name: instance_time_settings}}
+                inst_dec.id: instance_time_settings}}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
@@ -729,12 +729,12 @@ class TestGeneral(unittest.TestCase):
     def test_get_verdict_returns_shelves_warn(self):
         project_name = 'project_name'
         inst_dec = MagicMock()
-        inst_dec.name = 'inst1'
+        inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
         instance_settings = {
             project_name: {
-                inst_dec.name: instance_time_settings}}
+                inst_dec.id: instance_time_settings}}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
@@ -753,12 +753,12 @@ class TestGeneral(unittest.TestCase):
     def test_get_verdict_returns_delete(self):
         project_name = 'project_name'
         inst_dec = MagicMock()
-        inst_dec.name = 'inst1'
+        inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
         instance_settings = {
             project_name: {
-                inst_dec.name: instance_time_settings}}
+                inst_dec.id: instance_time_settings}}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
@@ -778,12 +778,12 @@ class TestGeneral(unittest.TestCase):
     def test_get_verdict_returns_delete_warn(self):
         project_name = 'project_name'
         inst_dec = MagicMock()
-        inst_dec.name = 'inst1'
+        inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
         instance_settings = {
             project_name: {
-                inst_dec.name: instance_time_settings}}
+                inst_dec.id: instance_time_settings}}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
@@ -805,12 +805,12 @@ class TestGeneral(unittest.TestCase):
     def test_get_verdict_returns_do_nothing(self):
         project_name = 'project_name'
         inst_dec = MagicMock()
-        inst_dec.name = 'inst1'
+        inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
         instance_settings = {
             project_name: {
-                inst_dec.name: instance_time_settings}}
+                inst_dec.id: instance_time_settings}}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,

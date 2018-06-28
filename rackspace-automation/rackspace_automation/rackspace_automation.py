@@ -24,7 +24,7 @@ INSTANCE_SETTINGS = 'instance_settings'
 GLOBAL_SETTINGS = 'settings'
 EMAIL_ADDRESSES = 'email_addresses'
 PROJECT_NAME = 'project_name'
-INSTANCE_NAME = 'instance_name'
+INSTANCE_ID = 'instance_id'
 SHELVE_RUNNING_WARNING_THRESHOLD = 'shelve_running_warning_threshold'
 SHELVE_RUNNING_THRESHOLD = 'shelve_running_threshold'
 SHELVE_STOPPED_WARNING_THRESHOLD = 'shelve_stopped_warning_threshold'
@@ -329,9 +329,9 @@ def get_verdict(project_name, inst_dec, configuration):
     threshold_settings = configuration[GLOBAL_SETTINGS]  # Default
 
     if project_name in configuration[INSTANCE_SETTINGS]:
-        if inst_dec.name in configuration[INSTANCE_SETTINGS][project_name]:
+        if inst_dec.id in configuration[INSTANCE_SETTINGS][project_name]:
             threshold_settings = \
-                configuration[INSTANCE_SETTINGS][project_name][inst_dec.name]
+                configuration[INSTANCE_SETTINGS][project_name][inst_dec.id]
 
     if threshold_settings.should_shelve(inst_dec):
         return Verdict.SHELVE
@@ -429,7 +429,7 @@ def fetch_configuration(spreadsheet_creds):
         {
             'project_i':
                 {
-                    'instance_j': TimeThresholdSettings
+                    '(ID of) instance_j': TimeThresholdSettings
                 }
         }
     'settings': TimeThresholdSettings,
@@ -469,14 +469,14 @@ def fetch_instance_settings(spreadsheet_creds):
     }
     """
 
-    def append_to_key_dict_dict(project_name, instance_name,
+    def append_to_key_dict_dict(project_name, instance_id,
                                 time_threshold_settings):
         if project_name not in instance_settings:
             instance_settings[project_name] = {
-                instance_name:
+                instance_id:
                     time_threshold_settings}
         else:
-            instance_settings[project_name][instance_name] = \
+            instance_settings[project_name][instance_id] = \
                 time_threshold_settings
 
     def parse_value(value):
@@ -516,7 +516,7 @@ def fetch_instance_settings(spreadsheet_creds):
         project_name = row_dict[PROJECT_NAME]
         if project_name:
             append_to_key_dict_dict(project_name,
-                                    row_dict[INSTANCE_NAME],
+                                    row_dict[INSTANCE_ID],
                                     TimeThresholdSettings(
                                         **get_time_threshold_settings_params(
                                             row_dict))
