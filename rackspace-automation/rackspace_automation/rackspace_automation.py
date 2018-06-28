@@ -649,7 +649,11 @@ def delete_instances(configuration, instances_to_delete):
     """
     for tenant, instances in instances_to_delete.items():
         for inst_dec in instances:
-            pass
+            if not inst_dec.delete():
+                logger.error(
+                    'Could not delete instance with name: {0} and '
+                    'id: {1} at tenant {2}'.format(
+                        inst_dec.name, inst_dec.id, tenant))
     subject = DELETE_NOTIF_SUBJ
     message = DELETE_NOTIF_MSG
     send_email(configuration, instances_to_delete, subject, message)
@@ -662,7 +666,12 @@ def shelve_instances(configuration, instances_to_shelve):
     :param instances_to_shelve: instances to shelve.
     """
     for tenant, instances in instances_to_shelve.items():
-        pass
+        for inst_dec in instances:
+            if not inst_dec.shelve():
+                logger.error(
+                    'Could not shelve instance with name: {0} and '
+                    'id: {1} at tenant {2}'.format(
+                        inst_dec.name, inst_dec.id, tenant))
 
     subject = SHELVE_NOTIF_SUBJ
     message = SHELVE_NOTIF_MSG
