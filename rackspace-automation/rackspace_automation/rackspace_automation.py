@@ -45,9 +45,17 @@ DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
     os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
 
 SHELVE_WARNING_SUBJ = 'Rackspace SHELVE warning'
+SHELVE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
+                     'shelved soon: {1}'
 DELETE_WARNING_SUBJ = 'Rackspace DELETE warning'
+DELETE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
+                     'deleted soon: {1}'
 DELETE_NOTIF_SUBJ = 'Rackspace DELETE notification'
+DELETE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
+                   'deleted: {1}'
 SHELVE_NOTIF_SUBJ = 'Rackspace SHELVE notification'
+SHELVE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
+                   'shelved: {1}'
 
 
 class RackspaceAutomationException(Exception):
@@ -595,13 +603,11 @@ def send_warnings(configuration, shelve_warnings, delete_warnings):
      deletion.
     """
     subject = SHELVE_WARNING_SUBJ
-    message = 'The following instances in the {0} tenant will be ' \
-              'shelved soon: {1}'
+    message = SHELVE_WARNING_MSG
     send_email(configuration, shelve_warnings, subject, message)
 
     subject = DELETE_WARNING_SUBJ
-    message = 'The following instances in the {0} tenant will be ' \
-              'deleted soon: {1}'
+    message = DELETE_WARNING_MSG
     send_email(configuration, delete_warnings, subject, message)
 
 
@@ -615,8 +621,7 @@ def delete_instances(configuration, instances_to_delete):
         pass
 
     subject = DELETE_NOTIF_SUBJ
-    message = 'The following instances in the {0} tenant has been ' \
-              'deleted: {1}'
+    message = DELETE_NOTIF_MSG
     send_email(configuration, instances_to_delete, subject, message)
 
 
@@ -630,8 +635,7 @@ def shelve(configuration, instances_to_shelve):
         pass
 
     subject = SHELVE_NOTIF_SUBJ
-    message = 'The following instances in the {0} tenant has been ' \
-              'shelved: {1}'
+    message = SHELVE_NOTIF_MSG
     send_email(configuration, instances_to_shelve, subject, message)
 
 
