@@ -798,6 +798,7 @@ class TestGeneral(unittest.TestCase):
             else:
                 l = p2_instance_list
             nova_client.servers.list = MagicMock(return_value=l)
+            return nova_client
 
         mock_get_credentials.side_effect = lambda x: x
         mock_novaclient.Client = MagicMock(side_effect=client)
@@ -805,10 +806,10 @@ class TestGeneral(unittest.TestCase):
         mock_inst_dec.side_effect = lambda inst, nova: inst
         mock_get_verdict.side_effect = lambda x, name, z: verdicts[name]
 
-        expected_res = {'instances_to_shelve': ['i1'],
-                        'instances_to_delete': ['i3'],
-                        'shelve_warnings': ['i2'],
-                        'delete_warnings': ['i4']}
+        expected_res = {'instances_to_shelve': {'p1': ['i1']},
+                        'instances_to_delete': {'p2': ['i3']},
+                        'shelve_warnings': {'p1': ['i2']},
+                        'delete_warnings': {'p2': ['i4']}}
         res = rackspace_automation.get_violating_instances(project_names, None)
 
         self.assertDictEqual(expected_res, res)
