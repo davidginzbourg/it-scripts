@@ -625,7 +625,7 @@ def delete_instances(configuration, instances_to_delete):
     send_email(configuration, instances_to_delete, subject, message)
 
 
-def shelve(configuration, instances_to_shelve):
+def shelve_instances(configuration, instances_to_shelve):
     """Shelve the instances.
 
     :param configuration: program configuration.
@@ -706,8 +706,8 @@ def main(event, context):
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    shelve(configuration=configuration,
-           instances_to_shelve=violating_instances['instances_to_shelve'])
+    shelve_instances(configuration=configuration,
+                     instances_to_shelve=violating_instances['instances_to_shelve'])
     delete_instances(configuration=configuration,
                      instances_to_delete=violating_instances[
                          'instances_to_delete'])

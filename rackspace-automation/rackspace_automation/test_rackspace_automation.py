@@ -901,14 +901,58 @@ class TestGeneral(unittest.TestCase):
     def test_get_spreadsheet_creds(self):
         pass
 
-    def test_send_warnings(self):
+    def test_send_email(self):
         pass
 
-    def test_delete_instances(self):
+    @mock.patch('rackspace_automation.send_email')
+    def test_send_warnings(self, mock_send_email):
+        configuration = 'conf'
+        shelve_warnings = 'shelve_warnings'
+        delete_warnings = 'delete_warnings'
+        rackspace_automation.send_warnings(configuration, shelve_warnings,
+                                           delete_warnings)
+
+        mock_send_email.assert_any_call(
+            configuration, shelve_warnings,
+            rackspace_automation.SHELVE_WARNING_SUBJ,
+            rackspace_automation.SHELVE_WARNING_MSG)
+
+        mock_send_email.assert_any_call(
+            configuration, delete_warnings,
+            rackspace_automation.DELETE_WARNING_SUBJ,
+            rackspace_automation.DELETE_WARNING_MSG)
+
+    @mock.patch('rackspace_automation.send_email')
+    def test_delete_instances(self, mock_send_email):
         pass
 
-    def test_shelve(self):
+    @mock.patch('rackspace_automation.send_email')
+    def test_delete_instances_sends_email(self, mock_send_email):
+        configuration = 'conf'
+        instances_to_delete = {'tenant': ['i1', 'i2']}
+        rackspace_automation.delete_instances(configuration,
+                                              instances_to_delete)
+
+        mock_send_email.assert_any_call(
+            configuration, instances_to_delete,
+            rackspace_automation.DELETE_NOTIF_SUBJ,
+            rackspace_automation.DELETE_NOTIF_MSG)
+
+    @mock.patch('rackspace_automation.send_email')
+    def test_shelve_instances(self, mock_send_email):
         pass
+
+    @mock.patch('rackspace_automation.send_email')
+    def test_shelve_instances_sends_email(self, mock_send_email):
+        configuration = 'conf'
+        instances_to_shelve = {'tenant': ['i1', 'i2']}
+        rackspace_automation.shelve_instances(configuration,
+                                              instances_to_shelve)
+
+        mock_send_email.assert_any_call(
+            configuration, instances_to_shelve,
+            rackspace_automation.SHELVE_NOTIF_SUBJ,
+            rackspace_automation.SHELVE_NOTIF_MSG)
 
     def test_add_missing_tenant_email_addresses(self):
         pass
