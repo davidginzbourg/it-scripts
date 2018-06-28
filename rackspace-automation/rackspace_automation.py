@@ -176,7 +176,7 @@ class TimeThresholdSettings:
         :param threshold: threshold in seconds.
         :return: whether more time has passed since 'time' than the threshold.
         """
-        if not time or not threshold:
+        if not time or not threshold or threshold == float('inf'):
             return False
         updated_at = dateutil.parser.parse(time).replace(tzinfo=None)
         expiration_threshold = get_utc_now() - datetime.timedelta(
