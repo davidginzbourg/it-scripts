@@ -614,14 +614,184 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(get_transition('random_action'),
                          StateTransition.NO_CHANGE)
 
-    def test_get_verdict(self):
-        pass
+    def test_get_verdict_uses_default_configuration(self):
+        project_name = 'project_name'
+        inst_dec = None
+        global_settings = MagicMock()
+        instance_settings = {}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings}
+
+        global_settings.should_shelve = MagicMock(return_value=True)
+
+        rackspace_automation.get_verdict(project_name, inst_dec, configuration)
+        global_settings.should_shelve.assert_any_call(None)
+
+    def test_get_verdict_configuration_swap(self):
+        project_name = 'project_name'
+        inst_dec = MagicMock()
+        inst_dec.name = 'inst1'
+        instance_time_settings = MagicMock()
+        global_settings = MagicMock()
+        instance_settings = {
+            project_name: {
+                inst_dec.name: instance_time_settings}}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings}
+
+        instance_time_settings.should_shelve = MagicMock(return_value=True)
+
+        rackspace_automation.get_verdict(project_name, inst_dec, configuration)
+        instance_time_settings.should_shelve.assert_any_call(inst_dec)
+
+    def test_get_verdict_shelves(self):
+        project_name = 'project_name'
+        inst_dec = MagicMock()
+        inst_dec.name = 'inst1'
+        instance_time_settings = MagicMock()
+        global_settings = MagicMock()
+        instance_settings = {
+            project_name: {
+                inst_dec.name: instance_time_settings}}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings}
+
+        instance_time_settings.should_shelve = MagicMock(return_value=True)
+
+        res = rackspace_automation.get_verdict(
+            project_name, inst_dec, configuration)
+
+        self.assertEqual(res, rackspace_automation.Verdict.SHELVE)
+
+    def test_get_verdict_returns_shelves_warn(self):
+        project_name = 'project_name'
+        inst_dec = MagicMock()
+        inst_dec.name = 'inst1'
+        instance_time_settings = MagicMock()
+        global_settings = MagicMock()
+        instance_settings = {
+            project_name: {
+                inst_dec.name: instance_time_settings}}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings}
+
+        instance_time_settings.should_shelve = MagicMock(return_value=False)
+        instance_time_settings.should_shelve_warn = MagicMock(
+            return_value=True)
+
+        res = rackspace_automation.get_verdict(
+            project_name, inst_dec, configuration)
+
+        self.assertEqual(res, rackspace_automation.Verdict.SHELVE_WARN)
+
+    def test_get_verdict_returns_delete(self):
+        project_name = 'project_name'
+        inst_dec = MagicMock()
+        inst_dec.name = 'inst1'
+        instance_time_settings = MagicMock()
+        global_settings = MagicMock()
+        instance_settings = {
+            project_name: {
+                inst_dec.name: instance_time_settings}}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings}
+
+        instance_time_settings.should_shelve = MagicMock(return_value=False)
+        instance_time_settings.should_shelve_warn = MagicMock(
+            return_value=False)
+        instance_time_settings.should_delete = MagicMock(return_value=True)
+
+        res = rackspace_automation.get_verdict(
+            project_name, inst_dec, configuration)
+
+        self.assertEqual(res, rackspace_automation.Verdict.DELETE)
+
+    def test_get_verdict_returns_delete_warn(self):
+        project_name = 'project_name'
+        inst_dec = MagicMock()
+        inst_dec.name = 'inst1'
+        instance_time_settings = MagicMock()
+        global_settings = MagicMock()
+        instance_settings = {
+            project_name: {
+                inst_dec.name: instance_time_settings}}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings}
+
+        instance_time_settings.should_shelve = MagicMock(return_value=False)
+        instance_time_settings.should_shelve_warn = MagicMock(
+            return_value=False)
+        instance_time_settings.should_delete = MagicMock(return_value=False)
+        instance_time_settings.should_delete_warn = MagicMock(
+            return_value=True)
+
+        res = rackspace_automation.get_verdict(
+            project_name, inst_dec, configuration)
+
+        self.assertEqual(res, rackspace_automation.Verdict.DELETE_WARN)
+
+    def test_get_verdict_returns_do_nothing(self):
+        project_name = 'project_name'
+        inst_dec = MagicMock()
+        inst_dec.name = 'inst1'
+        instance_time_settings = MagicMock()
+        global_settings = MagicMock()
+        instance_settings = {
+            project_name: {
+                inst_dec.name: instance_time_settings}}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings}
+
+        instance_time_settings.should_shelve = MagicMock(return_value=False)
+        instance_time_settings.should_shelve_warn = MagicMock(
+            return_value=False)
+        instance_time_settings.should_delete = MagicMock(return_value=False)
+        instance_time_settings.should_delete_warn = MagicMock(
+            return_value=False)
+
+        res = rackspace_automation.get_verdict(
+            project_name, inst_dec, configuration)
+
+        self.assertEqual(res, rackspace_automation.Verdict.DO_NOTHING)
 
     def test_get_violating_instances(self):
         pass
 
-    def test_get_tenant_names(self):
-        pass
+    @mock.patch('rackspace_automation.keystoneclient')
+    def test_get_tenant_names(self, mock_keystone):
+        p1 = MagicMock()
+        p2 = MagicMock()
+        p1.name = 'p1'
+        p2.name = 'p2'
+        project_list = [p1, p2]
+        Client = MagicMock()
+        Client.return_value = Client
+        Client.projects.list = MagicMock(return_value=project_list)
+        mock_keystone.Client = Client
+        credentials = MagicMock()
+        res = rackspace_automation.get_tenant_names(credentials)
+        self.assertListEqual(['p1', 'p2'], res)
 
     def test_get_worksheet_contents(self):
         pass
