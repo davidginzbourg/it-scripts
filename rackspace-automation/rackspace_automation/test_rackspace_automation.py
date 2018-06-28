@@ -1,6 +1,5 @@
 import unittest
 import datetime as dt
-from datetime import datetime
 
 import mock
 import numpy as np
@@ -955,8 +954,29 @@ class TestGeneral(unittest.TestCase):
     def test_get_spreadsheet_creds(self):
         pass
 
-    def test_send_email(self):
-        pass
+    @mock.patch('rackspace_automation.get_ses_client')
+    def test_send_email(self, mock_get_ses):
+        mock_ses = MagicMock()
+        mock_get_ses.return_value = mock_ses
+        mock_ses.send_email = MagicMock()
+
+        rackspace_automation.SOURCE_EMAIL_ADDRESS = 'source_email'
+        items_dict = {'tenant1': ['i1']}
+        configuration = {rackspace_automation.EMAIL_ADDRESSES:
+                             {'tenant1': 'destination'}}
+        rackspace_automation.send_email(configuration, items_dict, 'subject',
+                                        'message')
+
+        mock_ses.send_email.assert_called_with(
+            Source='source_email',
+            Destination={'ToAddresses': ['destination']},
+            Message={
+                'Subject': {
+                    'Data': 'subject'},
+                'Body': {
+                    'Html': {
+                        'Data': 'message'}}
+            })
 
     @mock.patch('rackspace_automation.send_email')
     def test_send_warnings(self, mock_send_email):
@@ -983,7 +1003,7 @@ class TestGeneral(unittest.TestCase):
         inst1.delete = MagicMock()
         inst2.delete = MagicMock()
         instances_to_delete = {
-            'tenant1':  [inst1, inst2]
+            'tenant1': [inst1, inst2]
         }
 
         rackspace_automation.delete_instances(None, instances_to_delete)
@@ -1010,7 +1030,7 @@ class TestGeneral(unittest.TestCase):
         inst1.shelve = MagicMock()
         inst2.shelve = MagicMock()
         instances_to_shelve = {
-            'tenant1':  [inst1, inst2]
+            'tenant1': [inst1, inst2]
         }
 
         rackspace_automation.shelve_instances(None, instances_to_shelve)

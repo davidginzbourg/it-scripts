@@ -600,6 +600,13 @@ def get_spreadsheet_creds():
         CREDENTIALS_FILE_PATH, scopes=SCOPES)
 
 
+def get_ses_client():
+    """
+    :return: the ses client, made for the tests.
+    """
+    return ses_client
+
+
 def send_email(configuration, items_dict, subject, message_format):
     """Sends out an email with the given subjct and message format.
 
@@ -612,7 +619,7 @@ def send_email(configuration, items_dict, subject, message_format):
     for tenant, instances in items_dict.items():
         destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
         message = message_format.format(tenant, instances)
-        message_id = ses_client.send_email(Source=SOURCE_EMAIL_ADDRESS,
+        message_id = get_ses_client().send_email(Source=SOURCE_EMAIL_ADDRESS,
                                            Destination=destination,
                                            Message={
                                                'Subject': {'Data': subject},
