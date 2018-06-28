@@ -497,9 +497,9 @@ def fetch_instance_settings(spreadsheet_creds):
     if not contents:
         return {}
     for row_dict in contents:
-        project_name = row_dict[PROJECT_NAME]
-        if project_name:
-            instance_settings[row_dict[INSTANCE_ID]] = \
+        instance_id = row_dict[INSTANCE_ID]
+        if instance_id:
+            instance_settings[instance_id] = \
                 TimeThresholdSettings(
                     **get_time_threshold_settings_params(
                         row_dict))

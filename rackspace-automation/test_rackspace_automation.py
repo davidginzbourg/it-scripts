@@ -621,14 +621,9 @@ class TestGeneral(unittest.TestCase):
                      'shelve_running_threshold': 113.0,
                      'shelve_stopped_threshold': 114.0,
                      'delete_shelved_threshold': 115.0}
-        project1 = 'project1'
-        project2 = 'project2'
-        row1 = {rackspace_automation.PROJECT_NAME: project1}
-        row1.update(inst_set1)
-        row2 = {rackspace_automation.PROJECT_NAME: project2}
-        row2.update(inst_set2)
-        row3 = {rackspace_automation.PROJECT_NAME: project1}
-        row3.update(inst_set3)
+        row1 = inst_set1
+        row2 = inst_set2
+        row3 = inst_set3
         contents.extend([row1, row2, row3])
 
         result = rackspace_automation.fetch_instance_settings(None)
