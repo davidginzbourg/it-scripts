@@ -1,11 +1,10 @@
-import unittest
 import datetime as dt
+import unittest
 
 import mock
 import numpy as np
-from mock import MagicMock
-
 import rackspace_automation
+from mock import MagicMock
 from rackspace_automation import InstanceDecorator, StateTransition
 
 '''
