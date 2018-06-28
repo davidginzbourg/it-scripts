@@ -40,7 +40,7 @@ SECONDS_TO_DAYS = 86400
 glb_exc_class = rackspace_automation.RackspaceAutomationException
 
 
-class MockInstDec():
+class MockInstDec:
     def __init__(self, running_since=None, stopped_since=None,
                  shelved_since=None):
         self._running_since = running_since
@@ -57,7 +57,7 @@ class MockInstDec():
         return self._shelved_since
 
 
-class MockInstDecNova():
+class MockInstDecNova:
     def __init__(self, instance_actions):
         self._instance_actions = instance_actions
 
@@ -69,7 +69,7 @@ class MockInstDecNova():
         return self._instance_actions
 
 
-class MockAction():
+class MockAction:
     def __init__(self, action):
         self._action = action
 
