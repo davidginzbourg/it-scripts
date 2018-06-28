@@ -16,6 +16,10 @@ logger.setLevel(logging.INFO)
 
 ses_client = boto3.client('ses', region_name='eu-west-1')
 
+###############
+DRY_RUN = True
+###############
+
 INSTANCE_SETTINGS = 'instance_settings'
 GLOBAL_SETTINGS = 'settings'
 EMAIL_ADDRESSES = 'email_addresses'
@@ -201,6 +205,8 @@ class InstanceDecorator:
     active_vm_states = {'active', 'building', 'paused', 'resized'}
     stopped_vm_states = {'stopped', 'suspended'}
     shelved_vm_states = {'shelved_offloaded'}
+    _delete_succ_code = 204
+    _shelve_succ_code = 202
 
     def __init__(self, instance, nova):
         """Initializer.
@@ -214,6 +220,10 @@ class InstanceDecorator:
         self.actions_log = sorted(actions,
                                   key=lambda x: x.start_time,
                                   reverse=True)
+
+    @property
+    def id(self):
+        return self.instance.id
 
     @property
     def name(self):
@@ -264,6 +274,26 @@ class InstanceDecorator:
 
     def __repr__(self):
         return self.name
+
+    def delete(self):
+        """Deletes the instance.
+
+        :return: whether it was successful or not.
+        """
+        if not DRY_RUN:
+            response = self.instance.delete()
+            return response and response[0] == self._delete_succ_code
+        return True
+
+    def shelve(self):
+        """Shelves the instance.
+
+        :return: whether it was successful or not.
+        """
+        if not DRY_RUN:
+            response = self.instance.shelve()
+            return response and response[0] == self._shelve_succ_code
+        return True
 
 
 def get_transition(action_str):
@@ -618,8 +648,8 @@ def delete_instances(configuration, instances_to_delete):
     :param instances_to_delete: instances to delete.
     """
     for tenant, instances in instances_to_delete.items():
-        pass
-
+        for inst_dec in instances:
+            pass
     subject = DELETE_NOTIF_SUBJ
     message = DELETE_NOTIF_MSG
     send_email(configuration, instances_to_delete, subject, message)

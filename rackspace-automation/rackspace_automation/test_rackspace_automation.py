@@ -279,6 +279,14 @@ class TestInstanceDecorator(unittest.TestCase):
     max_datetime = str(dt.datetime.max)
     fixed_test_date = dt.datetime(1990, 1, 1).isoformat()
 
+    def test_id(self):
+        instance = MagicMock()
+        instance.id = 'id'
+        inst_dec = InstanceDecorator(instance, MockInstDecNova([]))
+        id = inst_dec.id
+
+        self.assertEqual(id, 'id')
+
     def test_name(self):
         instance = MagicMock()
         instance.name = 'name'
@@ -393,6 +401,52 @@ class TestInstanceDecorator(unittest.TestCase):
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
         self.assertEqual(inst_dec.shelved_since(), self.fixed_test_date)
+
+    def test_delete_dry_run(self):
+        rackspace_automation.DRY_RUN = True
+        instance = MagicMock()
+        instance.delete = MagicMock()
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.delete()
+        instance.delete.assert_not_called()
+        self.assertTrue(res)
+
+    def test_delete(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.delete = MagicMock(return_value=[
+            InstanceDecorator._delete_succ_code])
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.delete()
+        instance.delete.assert_called()
+        self.assertTrue(res)
+
+    def test_shelve_dry_run(self):
+        rackspace_automation.DRY_RUN = True
+        instance = MagicMock()
+        instance.shelve = MagicMock()
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.shelve()
+        instance.shelve.assert_not_called()
+        self.assertTrue(res)
+
+    def test_shelve(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.shelve = MagicMock(return_value=[
+            InstanceDecorator._shelve_succ_code])
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.shelve()
+        instance.shelve.assert_called()
+        self.assertTrue(res)
 
 
 class TestGeneral(unittest.TestCase):
