@@ -997,7 +997,8 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.DELETE_WARNING_MSG)
 
     @mock.patch('rackspace_automation.send_email')
-    def test_delete_instances(self, _):
+    def test_delete_instances(self, mock_send_email):
+        configuration = 'conf'
         inst1 = MagicMock()
         inst2 = MagicMock()
         inst1.delete = MagicMock()
@@ -1006,17 +1007,11 @@ class TestGeneral(unittest.TestCase):
             'tenant1': [inst1, inst2]
         }
 
-        rackspace_automation.delete_instances(None, instances_to_delete)
+        rackspace_automation.delete_instances(configuration,
+                                              instances_to_delete)
 
         inst1.delete.assert_called()
         inst2.delete.assert_called()
-
-    @mock.patch('rackspace_automation.send_email')
-    def test_delete_instances_sends_email(self, mock_send_email):
-        configuration = 'conf'
-        instances_to_delete = {'tenant': ['i1', 'i2']}
-        rackspace_automation.delete_instances(configuration,
-                                              instances_to_delete)
 
         mock_send_email.assert_any_call(
             configuration, instances_to_delete,
@@ -1024,7 +1019,8 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.DELETE_NOTIF_MSG)
 
     @mock.patch('rackspace_automation.send_email')
-    def test_shelve_instances(self, _):
+    def test_shelve_instances(self, mock_send_email):
+        configuration = 'conf'
         inst1 = MagicMock()
         inst2 = MagicMock()
         inst1.shelve = MagicMock()
@@ -1033,17 +1029,11 @@ class TestGeneral(unittest.TestCase):
             'tenant1': [inst1, inst2]
         }
 
-        rackspace_automation.shelve_instances(None, instances_to_shelve)
+        rackspace_automation.shelve_instances(configuration,
+                                              instances_to_shelve)
 
         inst1.shelve.assert_called()
         inst2.shelve.assert_called()
-
-    @mock.patch('rackspace_automation.send_email')
-    def test_shelve_instances_sends_email(self, mock_send_email):
-        configuration = 'conf'
-        instances_to_shelve = {'tenant': ['i1', 'i2']}
-        rackspace_automation.shelve_instances(configuration,
-                                              instances_to_shelve)
 
         mock_send_email.assert_any_call(
             configuration, instances_to_shelve,
