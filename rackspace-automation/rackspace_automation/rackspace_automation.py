@@ -707,7 +707,8 @@ def main(event, context):
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
     shelve_instances(configuration=configuration,
-                     instances_to_shelve=violating_instances['instances_to_shelve'])
+                     instances_to_shelve=violating_instances[
+                         'instances_to_shelve'])
     delete_instances(configuration=configuration,
                      instances_to_delete=violating_instances[
                          'instances_to_delete'])
