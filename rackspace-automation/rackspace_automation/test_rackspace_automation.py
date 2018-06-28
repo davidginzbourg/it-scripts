@@ -814,8 +814,46 @@ class TestGeneral(unittest.TestCase):
 
         self.assertDictEqual(expected_res, res)
 
-    def test_get_violating_instances_dict_is_empty(self):
-        pass
+    @mock.patch('rackspace_automation.get_verdict')
+    @mock.patch('rackspace_automation.InstanceDecorator')
+    @mock.patch('rackspace_automation.novaclient')
+    @mock.patch('rackspace_automation.get_credentials')
+    def test_get_violating_instances_dict_is_empty(self,
+                                                   mock_get_credentials,
+                                                   mock_novaclient,
+                                                   mock_inst_dec,
+                                                   mock_get_verdict):
+        project_names = ['p1', 'p2']
+        p1_instance_list = ['i1', 'i2']
+        p2_instance_list = ['i3', 'i4', 'i5']
+        verdicts = {'i1': rackspace_automation.Verdict.DO_NOTHING,
+                    'i2': rackspace_automation.Verdict.DO_NOTHING,
+                    'i3': rackspace_automation.Verdict.DO_NOTHING,
+                    'i4': rackspace_automation.Verdict.DO_NOTHING,
+                    'i5': rackspace_automation.Verdict.DO_NOTHING}
+
+        def client(session, **kwargs):
+            nova_client = MagicMock()
+            if session == 'p1':
+                l = p1_instance_list
+            else:
+                l = p2_instance_list
+            nova_client.servers.list = MagicMock(return_value=l)
+            return nova_client
+
+        mock_get_credentials.side_effect = lambda x: x
+        mock_novaclient.Client = MagicMock(side_effect=client)
+
+        mock_inst_dec.side_effect = lambda inst, nova: inst
+        mock_get_verdict.side_effect = lambda x, name, z: verdicts[name]
+
+        expected_res = {'instances_to_shelve': {},
+                        'instances_to_delete': {},
+                        'shelve_warnings': {},
+                        'delete_warnings': {}}
+        res = rackspace_automation.get_violating_instances(project_names, None)
+
+        self.assertDictEqual(expected_res, res)
 
     @mock.patch('rackspace_automation.keystoneclient')
     def test_get_tenant_names(self, mock_keystone):
