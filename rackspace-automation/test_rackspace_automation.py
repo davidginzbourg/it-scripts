@@ -257,6 +257,16 @@ class TestTimeThresholdSettings(unittest.TestCase):
         is_above_threshold = rackspace_automation.TimeThresholdSettings \
             .is_above_threshold
 
+
+        time = dt.datetime(now_year, now_month, now_day).isoformat()
+        self.assertFalse(is_above_threshold(time, float('inf')))
+
+        time = dt.datetime(now_year, now_month, now_day).isoformat()
+        self.assertFalse(is_above_threshold(time, 0))
+
+        time = dt.datetime(now_year, now_month, now_day).isoformat()
+        self.assertFalse(is_above_threshold(None, 10))
+
         time = dt.datetime(now_year, now_month, now_day).isoformat()
         self.assertFalse(is_above_threshold(time, threshold_seconds))
 
