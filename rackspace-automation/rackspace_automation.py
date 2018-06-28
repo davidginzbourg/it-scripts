@@ -48,16 +48,16 @@ OPENSTACK_PASSWORD = os.environ.get('OPENSTACK_PASSWORD')
 DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
     os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
 
-SHELVE_WARNING_SUBJ = 'Rackspace SHELVE warning'
+SHELVE_WARNING_SUBJ = 'Rackspace SHELVE warning (test phase)'
 SHELVE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
                      'shelved soon: {1}'
-DELETE_WARNING_SUBJ = 'Rackspace DELETE warning'
+DELETE_WARNING_SUBJ = 'Rackspace DELETE warning (test phase)'
 DELETE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
                      'deleted soon: {1}'
-DELETE_NOTIF_SUBJ = 'Rackspace DELETE notification'
+DELETE_NOTIF_SUBJ = 'Rackspace DELETE notification (test phase)'
 DELETE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
                    'deleted: {1}'
-SHELVE_NOTIF_SUBJ = 'Rackspace SHELVE notification'
+SHELVE_NOTIF_SUBJ = 'Rackspace SHELVE notification (test phase)'
 SHELVE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
                    'shelved: {1}'
 
@@ -318,9 +318,8 @@ def get_transition(action_str):
     return StateTransition.NO_CHANGE
 
 
-def get_verdict(project_name, inst_dec, configuration):
+def get_verdict(inst_dec, configuration):
     """
-    :param project_name: project the instance belongs to.
     :param inst_dec: instance decorator.
     :type: InstanceDecorator.
     :param configuration: program configuration.
@@ -328,10 +327,9 @@ def get_verdict(project_name, inst_dec, configuration):
     """
     threshold_settings = configuration[GLOBAL_SETTINGS]  # Default
 
-    if project_name in configuration[INSTANCE_SETTINGS]:
-        if inst_dec.id in configuration[INSTANCE_SETTINGS][project_name]:
-            threshold_settings = \
-                configuration[INSTANCE_SETTINGS][project_name][inst_dec.id]
+    if inst_dec.id in configuration[INSTANCE_SETTINGS]:
+        threshold_settings = \
+            configuration[INSTANCE_SETTINGS][inst_dec.id]
 
     if threshold_settings.should_shelve(inst_dec):
         return Verdict.SHELVE
@@ -393,8 +391,7 @@ def get_violating_instances(project_names, configuration):
 
         for instance in instances_list:
             inst_dec = InstanceDecorator(instance, nova)
-            verdict = get_verdict(project, inst_dec,
-                                  configuration)
+            verdict = get_verdict(inst_dec, configuration)
             if verdict != Verdict.DO_NOTHING:
                 add_instance_to_dicts(project, inst_dec, verdict)
 
@@ -427,10 +424,7 @@ def fetch_configuration(spreadsheet_creds):
     {
     'instance_settings':
         {
-            'project_i':
-                {
-                    '(ID of) instance_j': TimeThresholdSettings
-                }
+            '(ID of) instance_j': TimeThresholdSettings
         }
     'settings': TimeThresholdSettings,
     'email_addresses': { 'tenant_name': 'email_address', ... }
@@ -462,27 +456,17 @@ def fetch_instance_settings(spreadsheet_creds):
     :param spreadsheet_creds: Google Spreadsheet credentials.
     :return: the instance settings as a dict:
     {
-        'project_i':
-            {
-                'instance_j': TimeThresholdSettings
-            }
+        '(ID of) instance_j': TimeThresholdSettings
     }
     """
-
-    def append_to_key_dict_dict(project_name, instance_id,
-                                time_threshold_settings):
-        if project_name not in instance_settings:
-            instance_settings[project_name] = {
-                instance_id:
-                    time_threshold_settings}
-        else:
-            instance_settings[project_name][instance_id] = \
-                time_threshold_settings
 
     def parse_value(value):
         if not value:
             return float('inf')
-        return float(value)
+        v = float(value)
+        if v < 0:
+            raise RackspaceAutomationException('Treshold cannot be negative.')
+        return v
 
     def get_time_threshold_settings_params(row_dict):
         shelve_running_warning_threshold = \
@@ -515,12 +499,10 @@ def fetch_instance_settings(spreadsheet_creds):
     for row_dict in contents:
         project_name = row_dict[PROJECT_NAME]
         if project_name:
-            append_to_key_dict_dict(project_name,
-                                    row_dict[INSTANCE_ID],
-                                    TimeThresholdSettings(
-                                        **get_time_threshold_settings_params(
-                                            row_dict))
-                                    )
+            instance_settings[row_dict[INSTANCE_ID]] = \
+                TimeThresholdSettings(
+                    **get_time_threshold_settings_params(
+                        row_dict))
     return instance_settings
 
 
