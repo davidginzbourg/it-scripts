@@ -472,8 +472,9 @@ def fetch_instance_settings(spreadsheet_creds):
     def append_to_key_dict_dict(project_name, instance_name,
                                 time_threshold_settings):
         if project_name not in instance_settings:
-            instance_settings[project_name] = {instance_name:
-                                                   time_threshold_settings}
+            instance_settings[project_name] = {
+                instance_name:
+                    time_threshold_settings}
         else:
             instance_settings[project_name][instance_name] = \
                 time_threshold_settings
@@ -620,12 +621,14 @@ def send_email(configuration, items_dict, subject, message_format):
         destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
         message = message_format.format(tenant, instances)
         message_id = get_ses_client().send_email(Source=SOURCE_EMAIL_ADDRESS,
-                                           Destination=destination,
-                                           Message={
-                                               'Subject': {'Data': subject},
-                                               'Body': {
-                                                   'Html': {'Data': message}}
-                                           })['MessageId']
+                                                 Destination=destination,
+                                                 Message={
+                                                     'Subject': {
+                                                         'Data': subject},
+                                                     'Body': {
+                                                         'Html': {
+                                                             'Data': message}}
+                                                 })['MessageId']
         logger.info('Sent a message to {0} with ID {1}.'.format(destination,
                                                                 message_id))
 

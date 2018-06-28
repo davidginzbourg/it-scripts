@@ -599,7 +599,7 @@ class TestGeneral(unittest.TestCase):
                      'shelve_stopped_warning_threshold':
                          1.0,
                      'delete_warning_threshold': 2.0,
-                     'shelve_running_threshold': 3.0,
+                     'shelve_running_threshold': '',
                      'shelve_stopped_threshold': 4.0,
                      'delete_shelved_threshold': 5.0}
         inst2 = 'inst2'
@@ -640,6 +640,7 @@ class TestGeneral(unittest.TestCase):
             del inst[rackspace_automation.INSTANCE_NAME]
 
         inst_set1['shelve_running_warning_threshold'] = float('inf')
+        inst_set1['shelve_running_threshold'] = float('inf')
         correct_result = {
             project1: {
                 inst1: rackspace_automation.TimeThresholdSettings(**inst_set1),
