@@ -54,9 +54,6 @@ S3_CLIENTS = {
 REFRESH_PERIOD = 3500
 BOTOCORE_CONFIG = botocore.client.Config(connect_timeout=5, read_timeout=5)
 
-credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    CREDENTIALS_FILE_PATH, scopes=SCOPES)
-gc = gspread.authorize(credentials)
 
 def set_credentials(sts_client):
     """Sets the S3 CLIENTS dictionary.
@@ -217,6 +214,9 @@ def add_row(values):
 
     :param values: values to add (each value is a column).
     """
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+    CREDENTIALS_FILE_PATH, scopes=SCOPES)
+	gc = gspread.authorize(credentials)
     sheet = gc.open_by_key(SPREADSHEET_ID).worksheet(WORKSHEET_NAME)
     sheet.append_row(values)
 
