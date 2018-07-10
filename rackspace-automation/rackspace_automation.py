@@ -758,7 +758,7 @@ def send_email_notifications(violating_instances, configuration):
     build_html('instances_to_delete', DELETE_NOTIF_MSG, True)
     build_html('shelve_warnings', SHELVE_WARNING_MSG, False)
     build_html('delete_warnings', DELETE_WARNING_MSG, False)
-    for tenant_name, msg in tenant_messages:
+    for tenant_name, msg in tenant_messages.items():
         send_email(
             EMAIL_SUBJECT_FORMAT.format(tenant_name),
             h_formats.msg_html.format(msg),
