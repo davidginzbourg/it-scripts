@@ -11,6 +11,8 @@ from novaclient import client as novaclient
 from keystoneclient.v3 import client as keystoneclient
 from oauth2client.service_account import ServiceAccountCredentials
 
+import html_formats as h_formats
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -48,18 +50,16 @@ OPENSTACK_PASSWORD = os.environ.get('OPENSTACK_PASSWORD')
 DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
     os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
 
-SHELVE_WARNING_SUBJ = 'Rackspace SHELVE warning (test phase)'
+EMAIL_SUBJECT_FORMAT = "(test) RackSpace action and warning notifications " \
+                       "for the {} tenant"
 SHELVE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
-                     'shelved soon: {1}'
-DELETE_WARNING_SUBJ = 'Rackspace DELETE warning (test phase)'
+                     'shelved soon:'
 DELETE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
-                     'deleted soon: {1}'
-DELETE_NOTIF_SUBJ = 'Rackspace DELETE notification (test phase)'
+                     'deleted soon:'
 DELETE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
-                   'deleted: {1}'
-SHELVE_NOTIF_SUBJ = 'Rackspace SHELVE notification (test phase)'
+                   'deleted:'
 SHELVE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
-                   'shelved: {1}'
+                   'shelved:'
 
 
 class RackspaceAutomationException(Exception):
@@ -221,6 +221,8 @@ class InstanceDecorator:
                                   key=lambda x: x.start_time,
                                   reverse=True)
 
+        self.last_action_result = None
+
     @property
     def id(self):
         return self.instance.id
@@ -280,20 +282,27 @@ class InstanceDecorator:
 
         :return: whether it was successful or not.
         """
+        self.last_action_result = True
         if not DRY_RUN:
             response = self.instance.delete()
-            return response and response[0] == self._delete_succ_code
-        return True
+            self.last_action_result = response \
+                                      and response[0] == self._delete_succ_code
+        return self.last_action_result
 
     def shelve(self):
         """Shelves the instance.
 
         :return: whether it was successful or not.
         """
+        self.last_action_result = True
         if not DRY_RUN:
             response = self.instance.shelve()
-            return response and response[0] == self._shelve_succ_code
-        return True
+            self.last_action_result = response \
+                                      and response[0] == self._shelve_succ_code
+        return self.last_action_result
+
+    def get_last_action_result(self):
+        return self.last_action_result
 
 
 def get_transition(action_str):
@@ -590,47 +599,26 @@ def get_ses_client():
     return ses_client
 
 
-def send_email(configuration, items_dict, subject, message_format):
-    """Sends out an email with the given subjct and message format.
+def send_email(subject, message, to_addresses):
+    """Sends out an email with the given subject and message.
 
-    :param configuration:  program configuration.
-    :param items_dict: dict to iterate through its items (tenants to instances
-        list).
     :param subject: email subject.
-    :param message_format: email message format.
+    :param message: email message.
+    :param to_addresses: addresses to send to.
     """
-    for tenant, instances in items_dict.items():
-        destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
-        message = message_format.format(tenant, instances)
-        message_id = get_ses_client().send_email(Source=SOURCE_EMAIL_ADDRESS,
-                                                 Destination=destination,
-                                                 Message={
-                                                     'Subject': {
-                                                         'Data': subject},
-                                                     'Body': {
-                                                         'Html': {
-                                                             'Data': message}}
-                                                 })['MessageId']
-        logger.info('Sent a message to {0} with ID {1}.'.format(destination,
-                                                                message_id))
 
-
-def send_warnings(configuration, shelve_warnings, delete_warnings):
-    """Sends out a warning regarding the given instances.
-
-    :param configuration: program configuration.
-    :param shelve_warnings: instances that their owners should be warned before
-     shelving.
-    :param delete_warnings: instances that their owners should be warned before
-     deletion.
-    """
-    subject = SHELVE_WARNING_SUBJ
-    message = SHELVE_WARNING_MSG
-    send_email(configuration, shelve_warnings, subject, message)
-
-    subject = DELETE_WARNING_SUBJ
-    message = DELETE_WARNING_MSG
-    send_email(configuration, delete_warnings, subject, message)
+    destination = {'ToAddresses': to_addresses}
+    message_id = get_ses_client().send_email(Source=SOURCE_EMAIL_ADDRESS,
+                                             Destination=destination,
+                                             Message={
+                                                 'Subject': {
+                                                     'Data': subject},
+                                                 'Body': {
+                                                     'Html': {
+                                                         'Data': message}}
+                                             })['MessageId']
+    logger.info('Sent a message to {0} with ID {1}.'.format(destination,
+                                                            message_id))
 
 
 def delete_instances(configuration, instances_to_delete):
@@ -646,9 +634,6 @@ def delete_instances(configuration, instances_to_delete):
                     'Could not delete instance with name: {0} and '
                     'id: {1} at tenant {2}'.format(
                         inst_dec.name, inst_dec.id, tenant))
-    subject = DELETE_NOTIF_SUBJ
-    message = DELETE_NOTIF_MSG
-    send_email(configuration, instances_to_delete, subject, message)
 
 
 def shelve_instances(configuration, instances_to_shelve):
@@ -664,10 +649,6 @@ def shelve_instances(configuration, instances_to_shelve):
                     'Could not shelve instance with name: {0} and '
                     'id: {1} at tenant {2}'.format(
                         inst_dec.name, inst_dec.id, tenant))
-
-    subject = SHELVE_NOTIF_SUBJ
-    message = SHELVE_NOTIF_MSG
-    send_email(configuration, instances_to_shelve, subject, message)
 
 
 def add_missing_tenant_email_addresses(project_names, configuration,
@@ -728,6 +709,61 @@ def check_os_environ_vars():
             'Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
 
+def perform_actions(violating_instances, configuration):
+    """Performs actions.
+
+    :param violating_instances: a dict of lists of rule violating instances.
+    :param configuration: program configuration.
+    """
+    shelve_instances(configuration=configuration,
+                     instances_to_shelve=violating_instances[
+                         'instances_to_shelve'])
+    delete_instances(configuration=configuration,
+                     instances_to_delete=violating_instances[
+                         'instances_to_delete'])
+
+
+def send_email_notifications(violating_instances, configuration):
+    """Sends out notifications.
+
+    :param violating_instances: a dict of lists of rule violating instances.
+    :param configuration: program configuration.
+    """
+    tenant_messages = {}
+
+    def build_html(instances_key, p_text_format, is_action):
+        for tenant, instances in violating_instances[instances_key].items():
+            table_row_str_buf = ""
+            for inst_dec in instances:
+                status = "Success" if inst_dec.get_last_action_result() \
+                    else "Failed"
+                if is_action:
+                    table_row_str_buf += \
+                        h_formats.action_table_cell_format.format(
+                            inst_dec.name, status)
+                else:
+                    table_row_str_buf += \
+                        h_formats.warning_table_cell_format.format(
+                            inst_dec.nam)
+            paragraph_text = p_text_format.format(tenant)
+            if is_action:
+                table_str = h_formats.action_table.format(table_row_str_buf)
+            else:
+                table_str = h_formats.warning_table.format(table_row_str_buf)
+
+            tenant_messages[tenant] = p.format(paragraph_text) + table_str
+
+    build_html('instances_to_shelve', SHELVE_NOTIF_MSG, True)
+    build_html('instances_to_delete', DELETE_NOTIF_MSG, True)
+    build_html('shelve_warnings', SHELVE_WARNING_MSG, False)
+    build_html('delete_warnings', DELETE_WARNING_MSG, False)
+    for tenant_name, msg in tenant_messages:
+        send_email(
+            EMAIL_SUBJECT_FORMAT.format(tenant_name),
+            h_formats.msg_html.format(msg),
+            [configuration[EMAIL_ADDRESSES][tenant_name]])
+
+
 def main(event, context):
     check_os_environ_vars()
     spreadsheet_credentials = get_spreadsheet_creds()
@@ -737,12 +773,5 @@ def main(event, context):
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    shelve_instances(configuration=configuration,
-                     instances_to_shelve=violating_instances[
-                         'instances_to_shelve'])
-    delete_instances(configuration=configuration,
-                     instances_to_delete=violating_instances[
-                         'instances_to_delete'])
-    send_warnings(configuration=configuration,
-                  shelve_warnings=violating_instances['shelve_warnings'],
-                  delete_warnings=violating_instances['delete_warnings'])
+    perform_actions(violating_instances, configuration)
+    send_email_notifications(violating_instances, configuration)

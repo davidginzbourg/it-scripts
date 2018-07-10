@@ -257,7 +257,6 @@ class TestTimeThresholdSettings(unittest.TestCase):
         is_above_threshold = rackspace_automation.TimeThresholdSettings \
             .is_above_threshold
 
-
         time = dt.datetime(now_year, now_month, now_day).isoformat()
         self.assertFalse(is_above_threshold(time, float('inf')))
 
@@ -420,6 +419,7 @@ class TestInstanceDecorator(unittest.TestCase):
         res = inst_dec.delete()
         instance.delete.assert_not_called()
         self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
 
     def test_delete(self):
         rackspace_automation.DRY_RUN = False
@@ -432,6 +432,19 @@ class TestInstanceDecorator(unittest.TestCase):
         res = inst_dec.delete()
         instance.delete.assert_called()
         self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_delete_failed(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.delete = MagicMock(return_value=[-1])
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.delete()
+        instance.delete.assert_called()
+        self.assertFalse(res)
+        self.assertFalse(inst_dec.get_last_action_result())
 
     def test_shelve_dry_run(self):
         rackspace_automation.DRY_RUN = True
@@ -455,6 +468,19 @@ class TestInstanceDecorator(unittest.TestCase):
         res = inst_dec.shelve()
         instance.shelve.assert_called()
         self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_shelve_failed(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.shelve = MagicMock(return_value=[-1])
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.shelve()
+        instance.shelve.assert_called()
+        self.assertFalse(res)
+        self.assertFalse(inst_dec.get_last_action_result())
 
 
 class TestGeneral(unittest.TestCase):
