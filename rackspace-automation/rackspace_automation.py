@@ -751,7 +751,8 @@ def send_email_notifications(violating_instances, configuration):
             else:
                 table_str = h_formats.warning_table.format(table_row_str_buf)
 
-            tenant_messages[tenant] = p.format(paragraph_text) + table_str
+            tenant_messages[tenant] = h_formats.p.format(paragraph_text) + \
+                                      table_str
 
     build_html('instances_to_shelve', SHELVE_NOTIF_MSG, True)
     build_html('instances_to_delete', DELETE_NOTIF_MSG, True)
