@@ -52,14 +52,22 @@ DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
 
 EMAIL_SUBJECT_FORMAT = "(test) RackSpace action and warning notifications " \
                        "for the {} tenant"
+GLOBAL_EMAIL_SUBJECT = "(test) RackSpace action and warning notifications"
+
 SHELVE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
                      'shelved soon:'
+GLOBAL_SHELVE_WARNING_MSG = 'The following instances will be shelved soon:'
+
 DELETE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
                      'deleted soon:'
-DELETE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
-                   'deleted:'
-SHELVE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
+GLOBAL_DELETE_WARNING_MSG = 'The following instances will be deleted soon:'
+
+DELETE_NOTIF_MSG = 'The following instances in the {0} tenant were deleted:'
+GLOBAL_DELETE_NOTIF_MSG = 'The following instances were deleted:'
+
+SHELVE_NOTIF_MSG = 'The following instances in the {0} tenant were ' \
                    'shelved:'
+GLOBAL_SHELVE_NOTIF_MSG = 'The following instances were shelved:'
 
 
 class RackspaceAutomationException(Exception):
@@ -730,39 +738,77 @@ def send_email_notifications(violating_instances, configuration):
     :param configuration: program configuration.
     """
     tenant_messages = {}
+    global_tenant_message = ''
 
     def build_html(instances_key, p_text_format, is_action):
         for tenant, instances in violating_instances[instances_key].items():
-            table_row_str_buf = ""
+            if configuration[EMAIL_ADDRESSES][tenant_name] != \
+                    DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
+                table_row_str_buf = ""
+                for inst_dec in instances:
+                    status = "Succeeded" \
+                        if inst_dec.get_last_action_result() else "Failed"
+                    if is_action:
+                        table_row_str_buf += \
+                            h_formats.action_table_cell_format.format(
+                                inst_dec.name, status)
+                    else:
+                        table_row_str_buf += \
+                            h_formats.warning_table_cell_format.format(
+                                inst_dec.nam)
+                paragraph_text = p_text_format.format(tenant)
+                if is_action:
+                    table_str = h_formats.action_table.format(
+                        table_row_str_buf)
+                else:
+                    table_str = h_formats.warning_table.format(
+                        table_row_str_buf)
+
+                tenant_messages[tenant] = h_formats.p.format(
+                    paragraph_text) + table_str
+
+    def build_global_html(instances_key, p_text_format, is_action):
+        table_row_str_buf = ""
+        for tenant, instances in violating_instances[instances_key].items():
             for inst_dec in instances:
-                status = "Succeeded" if inst_dec.get_last_action_result() \
-                    else "Failed"
+                status = "Succeeded" \
+                    if inst_dec.get_last_action_result() else "Failed"
                 if is_action:
                     table_row_str_buf += \
-                        h_formats.action_table_cell_format.format(
+                        h_formats.global_action_table_cell_format.format(
                             inst_dec.name, status)
                 else:
                     table_row_str_buf += \
-                        h_formats.warning_table_cell_format.format(
+                        h_formats.global_warning_table_cell_format.format(
                             inst_dec.nam)
-            paragraph_text = p_text_format.format(tenant)
-            if is_action:
-                table_str = h_formats.action_table.format(table_row_str_buf)
-            else:
-                table_str = h_formats.warning_table.format(table_row_str_buf)
-
-            tenant_messages[tenant] = h_formats.p.format(paragraph_text) + \
-                                      table_str
+        paragraph_text = p_text_format.format(tenant)
+        if is_action:
+            table_str = h_formats.action_table.format(
+                table_row_str_buf)
+        else:
+            table_str = h_formats.warning_table.format(
+                table_row_str_buf)
+        global_tenant_message += h_formats.p.format(paragraph_text) + table_str
 
     build_html('instances_to_shelve', SHELVE_NOTIF_MSG, True)
     build_html('instances_to_delete', DELETE_NOTIF_MSG, True)
     build_html('shelve_warnings', SHELVE_WARNING_MSG, False)
     build_html('delete_warnings', DELETE_WARNING_MSG, False)
+    build_global_html('instances_to_shelve', GLOBAL_SHELVE_NOTIF_MSG, True)
+    build_global_html('instances_to_delete', GLOBAL_DELETE_NOTIF_MSG, True)
+    build_global_html('shelve_warnings', GLOBAL_SHELVE_WARNING_MSG, False)
+    build_global_html('delete_warnings', GLOBAL_DELETE_WARNING_MSG, False)
     for tenant_name, msg in tenant_messages.items():
-        send_email(
-            EMAIL_SUBJECT_FORMAT.format(tenant_name),
-            h_formats.msg_html.format(msg),
-            [configuration[EMAIL_ADDRESSES][tenant_name]])
+        if configuration[EMAIL_ADDRESSES][tenant_name] != \
+                DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
+            send_email(
+                EMAIL_SUBJECT_FORMAT.format(tenant_name),
+                h_formats.msg_html.format(msg),
+                [configuration[EMAIL_ADDRESSES][tenant_name]])
+    send_email(
+        GLOBAL_EMAIL_SUBJECT,
+        h_formats.msg_html.format(global_tenant_message),
+        [DEFAULT_NOTIFICATION_EMAIL_ADDRESS])
 
 
 def main(event, context):
