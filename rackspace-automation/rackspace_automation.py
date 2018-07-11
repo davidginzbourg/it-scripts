@@ -754,7 +754,7 @@ def send_email_notifications(violating_instances, configuration):
                     else:
                         table_row_str_buf += \
                             h_formats.warning_table_cell_format.format(
-                                inst_dec.nam)
+                                inst_dec.name)
                 paragraph_text = p_text_format.format(tenant)
                 if is_action:
                     table_str = h_formats.action_table.format(
@@ -781,7 +781,7 @@ def send_email_notifications(violating_instances, configuration):
                 else:
                     table_row_str_buf += \
                         h_formats.global_warning_table_cell_format.format(
-                            tenant, inst_dec.nam)
+                            tenant, inst_dec.name)
         if is_empty:
             return ''
         if is_action:
