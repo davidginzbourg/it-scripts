@@ -3,7 +3,7 @@ msg_html = """
     <head>
         <style>
             table,p {
-                font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                font-family: 'Trebuchet MS', Arial, Helvetica, sans-serif;
                 border-collapse: collapse;
                 width: 100%;
             }
