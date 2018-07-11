@@ -735,7 +735,7 @@ def send_email_notifications(violating_instances, configuration):
         for tenant, instances in violating_instances[instances_key].items():
             table_row_str_buf = ""
             for inst_dec in instances:
-                status = "Success" if inst_dec.get_last_action_result() \
+                status = "Succeeded" if inst_dec.get_last_action_result() \
                     else "Failed"
                 if is_action:
                     table_row_str_buf += \
