@@ -742,7 +742,7 @@ def send_email_notifications(violating_instances, configuration):
 
     def build_html(instances_key, p_text_format, is_action):
         for tenant, instances in violating_instances[instances_key].items():
-            if configuration[EMAIL_ADDRESSES][tenant_name] != \
+            if configuration[EMAIL_ADDRESSES][tenant] != \
                     DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
                 table_row_str_buf = ""
                 for inst_dec in instances:
