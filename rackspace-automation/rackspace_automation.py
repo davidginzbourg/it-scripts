@@ -767,7 +767,7 @@ def send_email_notifications(violating_instances, configuration):
                 tenant_messages[tenant] = h_formats.p.format(
                     paragraph_text) + table_str
 
-    def build_global_html(instances_key, p_text_format, is_action):
+    def build_global_html(instances_key, p_text, is_action):
         table_row_str_buf = ""
         for tenant, instances in violating_instances[instances_key].items():
             for inst_dec in instances:
@@ -781,14 +781,13 @@ def send_email_notifications(violating_instances, configuration):
                     table_row_str_buf += \
                         h_formats.global_warning_table_cell_format.format(
                             inst_dec.nam)
-        paragraph_text = p_text_format.format(tenant)
         if is_action:
             table_str = h_formats.action_table.format(
                 table_row_str_buf)
         else:
             table_str = h_formats.warning_table.format(
                 table_row_str_buf)
-        global_tenant_message += h_formats.p.format(paragraph_text) + table_str
+        global_tenant_message += h_formats.p.format(p_text) + table_str
 
     build_html('instances_to_shelve', SHELVE_NOTIF_MSG, True)
     build_html('instances_to_delete', DELETE_NOTIF_MSG, True)
