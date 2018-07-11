@@ -47,3 +47,20 @@ warning_table = """
     <br>
     """
 warning_table_cell_format = "<tr><td>{0}</td></tr>"
+global_action_table = """
+    <table>
+    <tr><th>Tenant</th><th>Instance</th><th>Action status</th></tr>
+    {}
+    </table>
+    <br>
+    """
+global_action_table_cell_format = "<tr><td>{0}</td><td>{1}</td><td>{2}</td>" \
+                                  "</tr>"
+global_warning_table = """
+    <table>
+    <tr><th>Tenant</th><th>Instance</th></tr>
+    {}
+    </table>
+    <br>
+    """
+global_warning_table_cell_format = "<tr><td>{0}</td><td>{1}</td></tr>"
