@@ -738,7 +738,6 @@ def send_email_notifications(violating_instances, configuration):
     :param configuration: program configuration.
     """
     tenant_messages = {}
-    global_tenant_message = ''
 
     def build_html(instances_key, p_text_format, is_action):
         for tenant, instances in violating_instances[instances_key].items():
@@ -769,34 +768,42 @@ def send_email_notifications(violating_instances, configuration):
 
     def build_global_html(instances_key, p_text, is_action):
         table_row_str_buf = ""
+        is_empty = True
         for tenant, instances in violating_instances[instances_key].items():
+            is_empty = False
             for inst_dec in instances:
                 status = "Succeeded" \
                     if inst_dec.get_last_action_result() else "Failed"
                 if is_action:
                     table_row_str_buf += \
                         h_formats.global_action_table_cell_format.format(
-                            inst_dec.name, status)
+                            tenant, inst_dec.name, status)
                 else:
                     table_row_str_buf += \
                         h_formats.global_warning_table_cell_format.format(
-                            inst_dec.nam)
+                            tenant, inst_dec.nam)
+        if is_empty:
+            return ''
         if is_action:
-            table_str = h_formats.action_table.format(
+            table_str = h_formats.global_action_table.format(
                 table_row_str_buf)
         else:
-            table_str = h_formats.warning_table.format(
+            table_str = h_formats.global_warning_table.format(
                 table_row_str_buf)
-        global_tenant_message += h_formats.p.format(p_text) + table_str
+        return h_formats.p.format(p_text) + table_str
 
     build_html('instances_to_shelve', SHELVE_NOTIF_MSG, True)
     build_html('instances_to_delete', DELETE_NOTIF_MSG, True)
     build_html('shelve_warnings', SHELVE_WARNING_MSG, False)
     build_html('delete_warnings', DELETE_WARNING_MSG, False)
-    build_global_html('instances_to_shelve', GLOBAL_SHELVE_NOTIF_MSG, True)
-    build_global_html('instances_to_delete', GLOBAL_DELETE_NOTIF_MSG, True)
-    build_global_html('shelve_warnings', GLOBAL_SHELVE_WARNING_MSG, False)
-    build_global_html('delete_warnings', GLOBAL_DELETE_WARNING_MSG, False)
+    global_tenant_message = build_global_html(
+        'instances_to_shelve', GLOBAL_SHELVE_NOTIF_MSG, True)
+    global_tenant_message += build_global_html(
+        'instances_to_delete', GLOBAL_DELETE_NOTIF_MSG, True)
+    global_tenant_message += build_global_html(
+        'shelve_warnings', GLOBAL_SHELVE_WARNING_MSG, False)
+    global_tenant_message += build_global_html(
+        'delete_warnings', GLOBAL_DELETE_WARNING_MSG, False)
     for tenant_name, msg in tenant_messages.items():
         if configuration[EMAIL_ADDRESSES][tenant_name] != \
                 DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
