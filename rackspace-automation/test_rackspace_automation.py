@@ -68,8 +68,10 @@ class MockInstDecNova:
 
 
 class MockAction:
-    def __init__(self, action):
+    def __init__(self, action, start_time=None):
         self._action = action
+        self._start_time = start_time if start_time else \
+            TestInstanceDecorator.fixed_test_date
 
     @property
     def action(self):
@@ -77,7 +79,7 @@ class MockAction:
 
     @property
     def start_time(self):
-        return TestInstanceDecorator.fixed_test_date
+        return self._start_time
 
 
 class TestTimeThresholdSettings(unittest.TestCase):
@@ -337,11 +339,19 @@ class TestInstanceDecorator(unittest.TestCase):
         instance = MagicMock()
         setattr(instance, 'OS-EXT-STS:vm_state', 'active')
 
+        target_date = dt.datetime(1995, 1, 1).isoformat()
+
         # Create transitions the instance into a running state.
-        actions_log = [MockAction('shelve'), MockAction('create')]
+        actions_log = [
+            MockAction('os-start', target_date),
+            MockAction('os-stop', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('os-start', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('os-stop', dt.datetime(1994, 1, 1).isoformat()),
+            MockAction('create', dt.datetime(1991, 1, 1).isoformat())
+        ]
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
-        self.assertEqual(inst_dec.running_since(), self.fixed_test_date)
+        self.assertEqual(inst_dec.running_since(), target_date)
 
     def test_stopped_since_no_actions_log(self):
         inst_dec = InstanceDecorator(None, MockInstDecNova([]))
@@ -370,11 +380,19 @@ class TestInstanceDecorator(unittest.TestCase):
         instance = MagicMock()
         setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
 
+        target_date = dt.datetime(1994, 1, 1).isoformat()
+
         # Create transitions the instance into a running state.
-        actions_log = [MockAction('shelve'), MockAction('pause')]
+        actions_log = [
+            MockAction('os-stop', target_date),
+            MockAction('os-start', dt.datetime(1995, 1, 1).isoformat()),
+            MockAction('os-stop', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('os-start', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('create', dt.datetime(1991, 1, 1).isoformat())
+        ]
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
-        self.assertEqual(inst_dec.stopped_since(), self.fixed_test_date)
+        self.assertEqual(inst_dec.stopped_since(), target_date)
 
     def test_shelved_since_no_actions_log(self):
         inst_dec = InstanceDecorator(None, MockInstDecNova([]))
@@ -403,11 +421,19 @@ class TestInstanceDecorator(unittest.TestCase):
         instance = MagicMock()
         setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
 
+        target_date = dt.datetime(1994, 1, 1).isoformat()
+
         # Create transitions the instance into a running state.
-        actions_log = [MockAction('pause'), MockAction('shelve')]
+        actions_log = [
+            MockAction('pause', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('shelve', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('pause', dt.datetime(1995, 1, 1).isoformat()),
+            MockAction('shelve', target_date),
+            MockAction('create', dt.datetime(1991, 1, 1).isoformat())
+        ]
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
-        self.assertEqual(inst_dec.shelved_since(), self.fixed_test_date)
+        self.assertEqual(inst_dec.shelved_since(), target_date)
 
     def test_delete_dry_run(self):
         rackspace_automation.DRY_RUN = True
