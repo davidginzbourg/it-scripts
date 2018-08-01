@@ -723,11 +723,11 @@ class TestGeneral(unittest.TestCase):
                           'shelve_stopped_threshold': val5,
                           'delete_shelved_threshold': val6}])
         expected_res = {'shelve_running_warning_threshold': float(val1),
-                          'shelve_stopped_warning_threshold': float(val2),
-                          'delete_warning_threshold': float(val3),
-                          'shelve_running_threshold': float('inf'),
-                          'shelve_stopped_threshold': float(val5),
-                          'delete_shelved_threshold': float(val6)}
+                        'shelve_stopped_warning_threshold': float(val2),
+                        'delete_warning_threshold': float(val3),
+                        'shelve_running_threshold': float('inf'),
+                        'shelve_stopped_threshold': float(val5),
+                        'delete_shelved_threshold': float(val6)}
         rackspace_automation.fetch_global_settings(None)
         mock_ttsettings.assert_called_with(**expected_res)
 
@@ -1337,3 +1337,13 @@ class TestGeneral(unittest.TestCase):
 
         self.assertEqual(
             rackspace_automation.get_days_remaining(some_date, threshold), '3')
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_days_remaining_infinity(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+        some_date = dt.datetime(1990, 1, 1).isoformat()
+        threshold = float('inf')
+
+        self.assertEqual(
+            rackspace_automation.get_days_remaining(some_date, threshold),
+            'inf')

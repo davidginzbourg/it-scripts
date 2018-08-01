@@ -417,6 +417,8 @@ def get_days_remaining(in_cur_state_since, threshold):
     :param threshold: threshold (seconds).
     :return: how many days remaining until the threshold is breached.
     """
+    if threshold == float('inf'):
+        return 'inf'
     in_cur_state_since_parsed = dateutil.parser.parse(
         in_cur_state_since).replace(tzinfo=None)
     days_delta = in_cur_state_since_parsed + datetime.timedelta(
