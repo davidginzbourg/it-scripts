@@ -508,6 +508,38 @@ class TestInstanceDecorator(unittest.TestCase):
         self.assertFalse(res)
         self.assertFalse(inst_dec.get_last_action_result())
 
+    def test_get_status_returns_running(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'running')
+
+    def test_get_status_returns_stopped(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'stopped')
+
+    def test_get_status_returns_shelved(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'shelved')
+
+    def test_get_status_returns_unknown(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'say_what?')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'unknown')
+
 
 class TestGeneral(unittest.TestCase):
     def __init__(self, methodName='runTest'):

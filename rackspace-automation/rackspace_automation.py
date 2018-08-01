@@ -326,6 +326,17 @@ class InstanceDecorator:
         """
         return self.action_message
 
+    def get_status(self):
+        """
+        :return: a user friendly instance status.
+        """
+        if self.status in self.active_vm_states:
+            return 'running'
+        if self.status in self.stopped_vm_states:
+            return 'stopped'
+        if self.status in self.shelved_vm_states:
+            return 'shelved'
+        return 'unknown'
 
 def get_transition(action_str):
     """Given an action, it returns the corresponding transition of that action.
@@ -355,7 +366,16 @@ def get_action_message(verdict, threshold_settings):
     :param threshold_settings: threshold settings of the instance.
     :return: the message to display for the given verdict.
     """
-    return None
+    message = ''
+    # if verdict == Verdict.SHELVE:
+    #     message =
+    # elif verdict == Verdict.SHELVE_WARN:
+    #     pass
+    # elif verdict == Verdict.DELETE:
+    #     pass
+    # elif verdict == Verdict.DELETE_WARN:
+    #     pass
+    return message
 
 
 def get_verdict(inst_dec, configuration):
