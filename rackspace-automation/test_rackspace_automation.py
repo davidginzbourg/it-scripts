@@ -880,7 +880,8 @@ class TestGeneral(unittest.TestCase):
 
         self.assertEqual(res, rackspace_automation.Verdict.SHELVE)
 
-    def test_get_verdict_returns_shelves_warn(self):
+    @mock.patch('rackspace_automation.get_action_message')
+    def test_get_verdict_returns_shelves_warn(self, _):
         inst_dec = MagicMock()
         inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
@@ -921,7 +922,8 @@ class TestGeneral(unittest.TestCase):
 
         self.assertEqual(res, rackspace_automation.Verdict.DELETE)
 
-    def test_get_verdict_returns_delete_warn(self):
+    @mock.patch('rackspace_automation.get_action_message')
+    def test_get_verdict_returns_delete_warn(self, _):
         inst_dec = MagicMock()
         inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
