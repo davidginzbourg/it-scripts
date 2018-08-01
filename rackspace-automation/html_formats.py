@@ -33,34 +33,39 @@ msg_html = """
 p = "<p>{}</p><br>"
 action_table = """
     <table>
-    <tr><th>Instance</th><th>Action status</th></tr>
+    <tr><th>Instance</th><th>Action status</th><th>Reason</th></tr>
     {}
     </table>
     <br>
     """
-action_table_cell_format = "<tr><td>{0}</td><td>{1}</td></tr>"
+action_table_cell_format = "<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>"
 warning_table = """
     <table>
-    <tr><th>Instance</th></tr>
+    <tr><th>Instance</th><th>Note</th></tr>
     {}
     </table>
     <br>
     """
-warning_table_cell_format = "<tr><td>{0}</td></tr>"
+warning_table_cell_format = "<tr><td>{0}</td><td>{1}</td></tr>"
 global_action_table = """
     <table>
-    <tr><th>Tenant</th><th>Instance</th><th>Action status</th></tr>
+    <tr>
+    <th>Tenant</th><th>Instance</th><th>Action status</th><th>Reason</th>
+    </tr>
     {}
     </table>
     <br>
     """
-global_action_table_cell_format = "<tr><td>{0}</td><td>{1}</td><td>{2}</td>" \
+global_action_table_cell_format = "<tr>" \
+                                  "<td>{0}</td><td>{1}</td><td>{2}</td>" \
+                                  "<td>{3}</td>" \
                                   "</tr>"
 global_warning_table = """
     <table>
-    <tr><th>Tenant</th><th>Instance</th></tr>
+    <tr><th>Tenant</th><th>Instance</th><th>Note</th></tr>
     {}
     </table>
     <br>
     """
-global_warning_table_cell_format = "<tr><td>{0}</td><td>{1}</td></tr>"
+global_warning_table_cell_format = "<tr><td>{0}</td><td>{1}</td><td>{2}</td>" \
+                                   "</tr>"

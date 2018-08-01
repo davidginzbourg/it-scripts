@@ -230,6 +230,7 @@ class InstanceDecorator:
                                   reverse=True)
 
         self.last_action_result = None
+        self.action_message = None
 
     @property
     def id(self):
@@ -312,6 +313,19 @@ class InstanceDecorator:
     def get_last_action_result(self):
         return self.last_action_result
 
+    def add_action_message(self, message):
+        """Adds a reason to display for the action to be taken.
+
+        :param message: message to display for the action to be taken.
+        """
+        self.action_message = message
+
+    def get_action_message(self):
+        """
+        :return: action message (i.e. the Note/Reason action message).
+        """
+        return self.action_message
+
 
 def get_transition(action_str):
     """Given an action, it returns the corresponding transition of that action.
@@ -335,12 +349,22 @@ def get_transition(action_str):
     return StateTransition.NO_CHANGE
 
 
+def get_action_message(verdict, threshold_settings):
+    """
+    :param verdict: action verdict
+    :param threshold_settings: threshold settings of the instance.
+    :return: the message to display for the given verdict.
+    """
+    return None
+
+
 def get_verdict(inst_dec, configuration):
     """
     :param inst_dec: instance decorator.
     :type: InstanceDecorator.
     :param configuration: program configuration.
-    :return: which state to assign instance.
+    :return: which state to assign instance and a message to display regarding
+    the action
     """
     threshold_settings = configuration[GLOBAL_SETTINGS]  # Default
 
@@ -348,15 +372,17 @@ def get_verdict(inst_dec, configuration):
         threshold_settings = \
             configuration[INSTANCE_SETTINGS][inst_dec.id]
 
+    verdict = Verdict.DO_NOTHING
     if threshold_settings.should_shelve(inst_dec):
-        return Verdict.SHELVE
-    if threshold_settings.should_shelve_warn(inst_dec):
-        return Verdict.SHELVE_WARN
-    if threshold_settings.should_delete(inst_dec):
-        return Verdict.DELETE
-    if threshold_settings.should_delete_warn(inst_dec):
-        return Verdict.DELETE_WARN
-    return Verdict.DO_NOTHING
+        verdict = Verdict.SHELVE
+    elif threshold_settings.should_shelve_warn(inst_dec):
+        verdict = Verdict.SHELVE_WARN
+    elif threshold_settings.should_delete(inst_dec):
+        verdict = Verdict.DELETE
+    elif threshold_settings.should_delete_warn(inst_dec):
+        verdict = Verdict.DELETE_WARN
+    message = get_action_message(verdict, threshold_settings)
+    return verdict, message
 
 
 def get_violating_instances(project_names, configuration):
@@ -408,8 +434,9 @@ def get_violating_instances(project_names, configuration):
 
         for instance in instances_list:
             inst_dec = InstanceDecorator(instance, nova)
-            verdict = get_verdict(inst_dec, configuration)
+            verdict, message = get_verdict(inst_dec, configuration)
             if verdict != Verdict.DO_NOTHING:
+                inst_dec.add_action_message(message)
                 add_instance_to_dicts(project, inst_dec, verdict)
 
     return {'instances_to_shelve': instances_to_shelve,
@@ -750,11 +777,14 @@ def send_email_notifications(violating_instances, configuration):
                     if is_action:
                         table_row_str_buf += \
                             h_formats.action_table_cell_format.format(
-                                inst_dec.name, status)
+                                inst_dec.name,
+                                status,
+                                inst_dec.get_action_message())
                     else:
                         table_row_str_buf += \
                             h_formats.warning_table_cell_format.format(
-                                inst_dec.name)
+                                inst_dec.name,
+                                inst_dec.get_action_message())
                 paragraph_text = p_text_format.format(tenant)
                 if is_action:
                     table_str = h_formats.action_table.format(
@@ -777,11 +807,16 @@ def send_email_notifications(violating_instances, configuration):
                 if is_action:
                     table_row_str_buf += \
                         h_formats.global_action_table_cell_format.format(
-                            tenant, inst_dec.name, status)
+                            tenant,
+                            inst_dec.name,
+                            status,
+                            inst_dec.get_action_message())
                 else:
                     table_row_str_buf += \
                         h_formats.global_warning_table_cell_format.format(
-                            tenant, inst_dec.name)
+                            tenant,
+                            inst_dec.name,
+                            inst_dec.get_action_message())
         if is_empty:
             return ''
         if is_action:
