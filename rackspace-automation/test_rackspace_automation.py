@@ -1312,7 +1312,7 @@ class TestGeneral(unittest.TestCase):
 
         verdict = rackspace_automation.Verdict.DELETE_WARN
         threshold_settings = MagicMock()
-        threshold_settings.delete_warning_threshold = 5 * 24 * 60 * 60
+        threshold_settings.delete_shelved_threshold = 5 * 24 * 60 * 60
         threshold_settings.get_delete_warning_days = MagicMock(
             return_value=5)
 

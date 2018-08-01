@@ -466,7 +466,7 @@ def get_action_message(inst_dec, verdict, threshold_settings):
     elif verdict == Verdict.DELETE_WARN:
         days_remaining = get_days_remaining(
             inst_dec.shelved_since(),
-            threshold_settings.delete_warning_threshold)
+            threshold_settings.delete_shelved_threshold)
         days = threshold_settings.get_delete_warning_days()
         message = h_formats.del_wrn_msg_fmt.format(
             days_remaining, inst_dec.get_status(), days)
