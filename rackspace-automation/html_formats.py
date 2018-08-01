@@ -70,7 +70,7 @@ global_warning_table = """
 global_warning_table_cell_format = "<tr><td>{0}</td><td>{1}</td><td>{2}</td>" \
                                    "</tr>"
 action_msg_fmt = 'The instance was {0} state for more than {1} days.'
-shlv_wrn_msg_fmt = 'The instance will be shelved in {0} days. Maximum time ' \
-                   'an instance is allowed to be in the {1} state is {2} days.'
-del_wrn_msg_fmt = 'The instance will be deleted in {0} days. Maximum time ' \
-                   'an instance is allowed to be in the {1} state is {2} days.'
+shlv_wrn_msg_fmt = "Will be shelved in {0} days. Maximum time" \
+                   " allowed in the {1} state is {2} days."
+del_wrn_msg_fmt = "Will be deleted in {0} days. Maximum time" \
+                  " allowed in the {1} state is {2} days."

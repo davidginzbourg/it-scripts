@@ -1262,15 +1262,22 @@ class TestGeneral(unittest.TestCase):
                                                     threshold_settings),
             expected_res)
 
-    def test_get_action_message_shelve_warn_running(self):
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_action_message_shelve_warn_running(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+
         inst_dec = MagicMock(is_running=True, is_stopped=False)
         inst_dec.get_status = MagicMock(return_value='running')
+        inst_dec.running_since = MagicMock(
+            return_value=dt.datetime(1990, 1, 1).isoformat())
+
         verdict = rackspace_automation.Verdict.SHELVE_WARN
         threshold_settings = MagicMock()
-        threshold_settings.get_shelve_stopped_days = MagicMock(return_value=7)
+        threshold_settings.shelve_stopped_threshold = 5 * 24 * 60 * 60
+        threshold_settings.get_shelve_running_days = MagicMock(return_value=5)
 
         expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
-            'stopped', 7)
+            '3', 'running', 5)
         self.assertEqual(
             rackspace_automation.get_action_message(inst_dec, verdict,
                                                     threshold_settings),

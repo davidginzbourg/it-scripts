@@ -116,7 +116,8 @@ class TimeThresholdSettings:
         :param delete_shelved_threshold: shelved time threshold (seconds).
         """
         if shelve_running_warning_threshold > shelve_running_threshold \
-                or shelve_stopped_warning_threshold > shelve_stopped_threshold \
+                or shelve_stopped_warning_threshold > \
+                        shelve_stopped_threshold \
                 or delete_warning_threshold > delete_shelved_threshold:
             raise RackspaceAutomationException("One or more warning "
                                                "thresholds is greater than "
@@ -422,6 +423,7 @@ def get_days_remaining(in_cur_state_since, threshold):
         seconds=threshold) - get_utc_now()
     return str(days_delta.days)
 
+
 def get_action_message(inst_dec, verdict, threshold_settings):
     """
     :param inst_dec: instance decorator.
@@ -431,6 +433,7 @@ def get_action_message(inst_dec, verdict, threshold_settings):
     """
     message = ''
     days = '?'
+    days_remaining = '?'
     if verdict == Verdict.SHELVE:
         if inst_dec.is_running:
             days = threshold_settings.get_shelve_running_days()
@@ -438,21 +441,34 @@ def get_action_message(inst_dec, verdict, threshold_settings):
             days = threshold_settings.get_shelve_stopped_days()
         message = h_formats.action_msg_fmt.format(
             inst_dec.get_status(), days)
+
     elif verdict == Verdict.SHELVE_WARN:
         if inst_dec.is_running:
+            days_remaining = get_days_remaining(
+                inst_dec.running_since(),
+                threshold_settings.shelve_running_threshold)
             days = threshold_settings.get_shelve_running_warning_days()
         elif inst_dec.is_stopped:
+            days_remaining = get_days_remaining(
+                inst_dec.stopped_since(),
+                threshold_settings.shelve_stopped_threshold)
             days = threshold_settings.get_shelve_stopped_warning_days()
         message = h_formats.shlv_wrn_msg_fmt.format(
-            inst_dec.get_status(), days)
+            days_remaining, inst_dec.get_status(), days)
+
     elif verdict == Verdict.DELETE:
         days = threshold_settings.get_delete_shelved_days()
         message = h_formats.action_msg_fmt.format(
             inst_dec.get_status(), days)
+
     elif verdict == Verdict.DELETE_WARN:
+        days_remaining = get_days_remaining(
+            inst_dec.shelved_since(),
+            threshold_settings.delete_shelved_threshold)
         days = threshold_settings.get_delete_warning_days()
-        message = h_formats.action_msg_fmt.format(
-            inst_dec.get_status(), days)
+        message = h_formats.del_wrn_msg_fmt.format(
+            days_remaining, inst_dec.get_status(), days)
+
     return message
 
 
