@@ -265,7 +265,6 @@ class TestTimeThresholdSettings(unittest.TestCase):
         time = dt.datetime(now_year, now_month, now_day).isoformat()
         self.assertFalse(is_above_threshold(time, 0))
 
-        time = dt.datetime(now_year, now_month, now_day).isoformat()
         self.assertFalse(is_above_threshold(None, 10))
 
         time = dt.datetime(now_year, now_month, now_day).isoformat()
@@ -283,6 +282,35 @@ class TestTimeThresholdSettings(unittest.TestCase):
             now_year, now_month, now_day - threshold_days).isoformat()
         self.assertTrue(is_above_threshold(time, threshold_seconds))
 
+    def test_get_shelve_running_warning_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_running_warning_threshold = 86401 # a little more than 1 day
+        self.assertEqual(tts.get_shelve_running_warning_days(), '1.0')
+
+    def test_get_shelve_stopped_warning_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_stopped_warning_threshold = 86401 # a little more than 1 day
+        self.assertEqual(tts.get_shelve_stopped_warning_days(), '1.0')
+
+    def test_get_delete_warning_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.delete_warning_threshold = 86401 # a little more than 1 day
+        self.assertEqual(tts.get_delete_warning_days(), '1.0')
+
+    def test_get_shelve_running_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_running_threshold = 86401 # a little more than 1 day
+        self.assertEqual(tts.get_shelve_running_days(), '1.0')
+
+    def test_get_shelve_stopped_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_stopped_threshold = 86401 # a little more than 1 day
+        self.assertEqual(tts.get_shelve_stopped_days(), '1.0')
+
+    def test_get_delete_shelved_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.delete_shelved_threshold = 86401 # a little more than 1 day
+        self.assertEqual(tts.get_delete_shelved_days(), '1.0')
 
 class TestInstanceDecorator(unittest.TestCase):
     max_datetime = str(dt.datetime.max)
@@ -539,6 +567,55 @@ class TestInstanceDecorator(unittest.TestCase):
         inst_dec = InstanceDecorator(instance, MagicMock())
 
         self.assertEqual(inst_dec.get_status(), 'unknown')
+
+    def test_is_running_true(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertTrue(inst_dec.is_running)
+
+    def test_is_running_false(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertFalse(inst_dec.is_running)
+
+    def test_is_stopped_true(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertTrue(inst_dec.is_stopped)
+
+    def test_is_stopped_false(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertFalse(inst_dec.is_stopped)
+
+    def test_is_shelved_true(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertTrue(inst_dec.is_shelved)
+
+    def test_is_shelved_false(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertFalse(inst_dec.is_shelved)
+
 
 
 class TestGeneral(unittest.TestCase):

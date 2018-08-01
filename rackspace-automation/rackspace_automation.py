@@ -205,6 +205,42 @@ class TimeThresholdSettings:
                and self.delete_shelved_threshold == \
                    other.delete_shelved_threshold
 
+    def get_shelve_running_warning_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_running_warning_threshold / 86400)
+
+    def get_shelve_stopped_warning_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_stopped_warning_threshold / 86400)
+
+    def get_delete_warning_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.delete_warning_threshold / 86400)
+
+    def get_shelve_running_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_running_threshold / 86400)
+
+    def get_shelve_stopped_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_stopped_threshold / 86400)
+
+    def get_delete_shelved_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.delete_shelved_threshold / 86400)
+
 
 class InstanceDecorator:
     """A decorator for the novaclient instances.
@@ -245,7 +281,7 @@ class InstanceDecorator:
         return getattr(self.instance, 'OS-EXT-STS:vm_state')
 
     def running_since(self):
-        if not self.actions_log or self.status not in self.active_vm_states:
+        if not self.actions_log or not self.is_running:
             return None
         for action in self.actions_log:
             trans = get_transition(action.action)
@@ -257,7 +293,7 @@ class InstanceDecorator:
         return str(datetime.datetime.max)
 
     def stopped_since(self):
-        if not self.actions_log or self.status not in self.stopped_vm_states:
+        if not self.actions_log or not self.is_stopped:
             return None
         for action in self.actions_log:
             trans = get_transition(action.action)
@@ -269,7 +305,7 @@ class InstanceDecorator:
         return str(datetime.datetime.max)
 
     def shelved_since(self):
-        if not self.actions_log or self.status not in self.shelved_vm_states:
+        if not self.actions_log or not self.is_shelved:
             return None
         for action in self.actions_log:
             trans = get_transition(action.action)
@@ -330,13 +366,26 @@ class InstanceDecorator:
         """
         :return: a user friendly instance status.
         """
-        if self.status in self.active_vm_states:
+        if self.is_running:
             return 'running'
-        if self.status in self.stopped_vm_states:
+        if self.is_stopped:
             return 'stopped'
-        if self.status in self.shelved_vm_states:
+        if self.is_shelved:
             return 'shelved'
         return 'unknown'
+
+    @property
+    def is_running(self):
+        return self.status in self.active_vm_states
+
+    @property
+    def is_stopped(self):
+        return self.status in self.stopped_vm_states
+
+    @property
+    def is_shelved(self):
+        return self.status in self.shelved_vm_states
+
 
 def get_transition(action_str):
     """Given an action, it returns the corresponding transition of that action.
@@ -360,8 +409,9 @@ def get_transition(action_str):
     return StateTransition.NO_CHANGE
 
 
-def get_action_message(verdict, threshold_settings):
+def get_action_message(inst_dec, verdict, threshold_settings):
     """
+    :param inst_dec: instance decorator.
     :param verdict: action verdict
     :param threshold_settings: threshold settings of the instance.
     :return: the message to display for the given verdict.
@@ -401,7 +451,7 @@ def get_verdict(inst_dec, configuration):
         verdict = Verdict.DELETE
     elif threshold_settings.should_delete_warn(inst_dec):
         verdict = Verdict.DELETE_WARN
-    message = get_action_message(verdict, threshold_settings)
+    message = get_action_message(inst_dec, verdict, threshold_settings)
     return verdict, message
 
 
