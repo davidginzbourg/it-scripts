@@ -7,33 +7,6 @@ import rackspace_automation
 from mock import MagicMock
 from rackspace_automation import InstanceDecorator, StateTransition
 
-'''
-List of rackspace_automation functions:
-
-InstanceDecorator
-RackspaceAutomationException
-ServiceAccountCredentials
-StateTransition
-TimeThresholdSettings
-Verdict
-add_missing_tenant_email_addresses
-check_os_environ_vars
-delete_instances
-fetch_configuration
-fetch_email_addresses
-fetch_global_settings
-fetch_instance_settings
-get_credentials
-get_spreadsheet_creds
-get_tenant_names
-get_transition
-get_verdict
-get_violating_instances
-main
-send_warnings
-shelve
-'''
-
 SECONDS_TO_DAYS = 86400
 glb_exc_class = rackspace_automation.RackspaceAutomationException
 
@@ -737,20 +710,26 @@ class TestGeneral(unittest.TestCase):
                           rackspace_automation.fetch_global_settings, None)
         del contents[:]
 
-        val1 = 'val1'
-        val2 = 'val2'
-        val3 = 'val3'
-        val4 = 'val4'
-        val5 = 'val5'
-        val6 = 'val6'
+        val1 = '1'
+        val2 = '2'
+        val3 = '3'
+        val4 = ''
+        val5 = '4'
+        val6 = '5'
         contents.extend([{'shelve_running_warning_threshold': val1,
                           'shelve_stopped_warning_threshold': val2,
                           'delete_warning_threshold': val3,
                           'shelve_running_threshold': val4,
                           'shelve_stopped_threshold': val5,
                           'delete_shelved_threshold': val6}])
+        expected_res = {'shelve_running_warning_threshold': float(val1),
+                          'shelve_stopped_warning_threshold': float(val2),
+                          'delete_warning_threshold': float(val3),
+                          'shelve_running_threshold': float('inf'),
+                          'shelve_stopped_threshold': float(val5),
+                          'delete_shelved_threshold': float(val6)}
         rackspace_automation.fetch_global_settings(None)
-        mock_ttsettings.assert_called_with(**contents[0])
+        mock_ttsettings.assert_called_with(**expected_res)
 
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_instance_settings(self, mock_contents):

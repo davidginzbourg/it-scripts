@@ -608,6 +608,19 @@ def get_worksheet_contents(spreadsheet_creds, worksheet_name):
     return sheet.get_all_records()
 
 
+def parse_value(value):
+    """Parses value from string to float
+    :param value: value to parse.
+    :return: parsed value.
+    """
+    if not value:
+        return float('inf')
+    v = float(value)
+    if v < 0:
+        raise RackspaceAutomationException('Threshold cannot be negative.')
+    return v
+
+
 def fetch_instance_settings(spreadsheet_creds):
     """Returns the instance settings.
 
@@ -617,14 +630,6 @@ def fetch_instance_settings(spreadsheet_creds):
         '(ID of) instance_j': TimeThresholdSettings
     }
     """
-
-    def parse_value(value):
-        if not value:
-            return float('inf')
-        v = float(value)
-        if v < 0:
-            raise RackspaceAutomationException('Treshold cannot be negative.')
-        return v
 
     def get_time_threshold_settings_params(row_dict):
         shelve_running_warning_threshold = \
@@ -686,6 +691,8 @@ def fetch_global_settings(spreadsheet_creds):
     if not contents:
         raise RackspaceAutomationException("Settings worksheet is empty.")
     validate_row(contents[0])
+    for key in contents[0].keys():
+        contents[0][key] = parse_value(contents[0][key])
     return TimeThresholdSettings(**contents[0])
 
 
