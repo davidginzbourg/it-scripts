@@ -1273,8 +1273,9 @@ class TestGeneral(unittest.TestCase):
 
         verdict = rackspace_automation.Verdict.SHELVE_WARN
         threshold_settings = MagicMock()
-        threshold_settings.shelve_stopped_threshold = 5 * 24 * 60 * 60
-        threshold_settings.get_shelve_running_days = MagicMock(return_value=5)
+        threshold_settings.shelve_running_threshold = 5 * 24 * 60 * 60
+        threshold_settings.get_shelve_running_warning_days = MagicMock(
+            return_value=5)
 
         expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
             '3', 'running', 5)
@@ -1282,14 +1283,70 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.get_action_message(inst_dec, verdict,
                                                     threshold_settings),
             expected_res)
-        #
-        # def test_get_action_message_shelve_warn_stopped(self):
-        #
-        # def test_get_action_message_delete(self):
-        #
-        # def test_get_action_message_delete_warn(self):
-        #
-        # def test_get_action_message_empty(self):
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_action_message_shelve_warn_stopped(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+
+        inst_dec = MagicMock(is_running=False, is_stopped=True)
+        inst_dec.get_status = MagicMock(return_value='stopped')
+        inst_dec.stopped_since = MagicMock(
+            return_value=dt.datetime(1990, 1, 1).isoformat())
+
+        verdict = rackspace_automation.Verdict.SHELVE_WARN
+        threshold_settings = MagicMock()
+        threshold_settings.shelve_stopped_threshold = 5 * 24 * 60 * 60
+        threshold_settings.get_shelve_stopped_warning_days = MagicMock(
+            return_value=5)
+
+        expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
+            '3', 'stopped', 5)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    def test_get_action_message_delete(self):
+        inst_dec = MagicMock()
+        inst_dec.get_status = MagicMock(return_value='shelved')
+        verdict = rackspace_automation.Verdict.DELETE
+        threshold_settings = MagicMock()
+        threshold_settings.get_delete_shelved_days = MagicMock(return_value=7)
+
+        expected_res = rackspace_automation.h_formats.action_msg_fmt.format(
+            'shelved', 7)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_action_message_delete_warn(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+
+        inst_dec = MagicMock()
+        inst_dec.get_status = MagicMock(return_value='shelved')
+        inst_dec.shelved_since = MagicMock(
+            return_value=dt.datetime(1990, 1, 1).isoformat())
+
+        verdict = rackspace_automation.Verdict.DELETE_WARN
+        threshold_settings = MagicMock()
+        threshold_settings.delete_warning_threshold = 5 * 24 * 60 * 60
+        threshold_settings.get_delete_warning_days = MagicMock(
+            return_value=5)
+
+        expected_res = rackspace_automation.h_formats.del_wrn_msg_fmt.format(
+            '3', 'shelved', 5)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    def test_get_action_message_empty(self):
+        verdict = rackspace_automation.Verdict.DO_NOTHING
+
+        self.assertEqual(rackspace_automation.get_action_message(
+            MagicMock(), verdict, MagicMock()), '')
 
     @mock.patch('rackspace_automation.get_utc_now')
     def test_get_days_remaining(self, mock_utc_now):
