@@ -284,33 +284,34 @@ class TestTimeThresholdSettings(unittest.TestCase):
 
     def test_get_shelve_running_warning_days(self):
         tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
-        tts.shelve_running_warning_threshold = 86401 # a little more than 1 day
+        tts.shelve_running_warning_threshold = 86401  # a little more than 1 day
         self.assertEqual(tts.get_shelve_running_warning_days(), '1.0')
 
     def test_get_shelve_stopped_warning_days(self):
         tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
-        tts.shelve_stopped_warning_threshold = 86401 # a little more than 1 day
+        tts.shelve_stopped_warning_threshold = 86401  # a little more than 1 day
         self.assertEqual(tts.get_shelve_stopped_warning_days(), '1.0')
 
     def test_get_delete_warning_days(self):
         tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
-        tts.delete_warning_threshold = 86401 # a little more than 1 day
+        tts.delete_warning_threshold = 86401  # a little more than 1 day
         self.assertEqual(tts.get_delete_warning_days(), '1.0')
 
     def test_get_shelve_running_days(self):
         tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
-        tts.shelve_running_threshold = 86401 # a little more than 1 day
+        tts.shelve_running_threshold = 86401  # a little more than 1 day
         self.assertEqual(tts.get_shelve_running_days(), '1.0')
 
     def test_get_shelve_stopped_days(self):
         tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
-        tts.shelve_stopped_threshold = 86401 # a little more than 1 day
+        tts.shelve_stopped_threshold = 86401  # a little more than 1 day
         self.assertEqual(tts.get_shelve_stopped_days(), '1.0')
 
     def test_get_delete_shelved_days(self):
         tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
-        tts.delete_shelved_threshold = 86401 # a little more than 1 day
+        tts.delete_shelved_threshold = 86401  # a little more than 1 day
         self.assertEqual(tts.get_delete_shelved_days(), '1.0')
+
 
 class TestInstanceDecorator(unittest.TestCase):
     max_datetime = str(dt.datetime.max)
@@ -615,7 +616,6 @@ class TestInstanceDecorator(unittest.TestCase):
         inst_dec = InstanceDecorator(instance, MagicMock())
 
         self.assertFalse(inst_dec.is_shelved)
-
 
 
 class TestGeneral(unittest.TestCase):
@@ -1001,7 +1001,7 @@ class TestGeneral(unittest.TestCase):
         mock_novaclient.Client = MagicMock(side_effect=client)
 
         mock_inst_dec.side_effect = lambda inst, nova: inst
-        mock_get_verdict.side_effect = lambda name, z: (verdicts[name], None)
+        mock_get_verdict.side_effect = lambda name, z: verdicts[name]
 
         expected_res = {'instances_to_shelve': {'p1': [i1]},
                         'instances_to_delete': {'p2': [i3]},
@@ -1047,7 +1047,7 @@ class TestGeneral(unittest.TestCase):
         mock_novaclient.Client = MagicMock(side_effect=client)
 
         mock_inst_dec.side_effect = lambda inst, nova: inst
-        mock_get_verdict.side_effect = lambda name, z: (verdicts[name], None)
+        mock_get_verdict.side_effect = lambda name, z: verdicts[name]
 
         expected_res = {'instances_to_shelve': {},
                         'instances_to_delete': {},
@@ -1234,5 +1234,61 @@ class TestGeneral(unittest.TestCase):
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
 
-    def test_main(self):
-        pass
+    def test_get_action_message_shelve_running(self):
+        inst_dec = MagicMock(is_running=True, is_stopped=False)
+        inst_dec.get_status = MagicMock(return_value='running')
+        verdict = rackspace_automation.Verdict.SHELVE
+        threshold_settings = MagicMock()
+        threshold_settings.get_shelve_running_days = MagicMock(return_value=7)
+
+        expected_res = rackspace_automation.h_formats.action_msg_fmt.format(
+            'running', 7)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    def test_get_action_message_shelve_stopped(self):
+        inst_dec = MagicMock(is_running=False, is_stopped=True)
+        inst_dec.get_status = MagicMock(return_value='stopped')
+        verdict = rackspace_automation.Verdict.SHELVE
+        threshold_settings = MagicMock()
+        threshold_settings.get_shelve_stopped_days = MagicMock(return_value=7)
+
+        expected_res = rackspace_automation.h_formats.action_msg_fmt.format(
+            'stopped', 7)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    def test_get_action_message_shelve_warn_running(self):
+        inst_dec = MagicMock(is_running=True, is_stopped=False)
+        inst_dec.get_status = MagicMock(return_value='running')
+        verdict = rackspace_automation.Verdict.SHELVE_WARN
+        threshold_settings = MagicMock()
+        threshold_settings.get_shelve_stopped_days = MagicMock(return_value=7)
+
+        expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
+            'stopped', 7)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+        #
+        # def test_get_action_message_shelve_warn_stopped(self):
+        #
+        # def test_get_action_message_delete(self):
+        #
+        # def test_get_action_message_delete_warn(self):
+        #
+        # def test_get_action_message_empty(self):
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_days_remaining(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+        some_date = dt.datetime(1990, 1, 1).isoformat()
+        threshold = 5 * 24 * 60 * 60
+
+        self.assertEqual(
+            rackspace_automation.get_days_remaining(some_date, threshold), '3')

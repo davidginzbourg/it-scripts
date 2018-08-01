@@ -409,6 +409,19 @@ def get_transition(action_str):
     return StateTransition.NO_CHANGE
 
 
+def get_days_remaining(in_cur_state_since, threshold):
+    """Calculates the days remaining until the threshold is breached.
+
+    :param in_cur_state_since: date in iso format.
+    :param threshold: threshold (seconds).
+    :return: how many days remaining until the threshold is breached.
+    """
+    in_cur_state_since_parsed = dateutil.parser.parse(
+        in_cur_state_since).replace(tzinfo=None)
+    days_delta = in_cur_state_since_parsed + datetime.timedelta(
+        seconds=threshold) - get_utc_now()
+    return str(days_delta.days)
+
 def get_action_message(inst_dec, verdict, threshold_settings):
     """
     :param inst_dec: instance decorator.
@@ -417,14 +430,29 @@ def get_action_message(inst_dec, verdict, threshold_settings):
     :return: the message to display for the given verdict.
     """
     message = ''
-    # if verdict == Verdict.SHELVE:
-    #     message =
-    # elif verdict == Verdict.SHELVE_WARN:
-    #     pass
-    # elif verdict == Verdict.DELETE:
-    #     pass
-    # elif verdict == Verdict.DELETE_WARN:
-    #     pass
+    days = '?'
+    if verdict == Verdict.SHELVE:
+        if inst_dec.is_running:
+            days = threshold_settings.get_shelve_running_days()
+        elif inst_dec.is_stopped:
+            days = threshold_settings.get_shelve_stopped_days()
+        message = h_formats.action_msg_fmt.format(
+            inst_dec.get_status(), days)
+    elif verdict == Verdict.SHELVE_WARN:
+        if inst_dec.is_running:
+            days = threshold_settings.get_shelve_running_warning_days()
+        elif inst_dec.is_stopped:
+            days = threshold_settings.get_shelve_stopped_warning_days()
+        message = h_formats.shlv_wrn_msg_fmt.format(
+            inst_dec.get_status(), days)
+    elif verdict == Verdict.DELETE:
+        days = threshold_settings.get_delete_shelved_days()
+        message = h_formats.action_msg_fmt.format(
+            inst_dec.get_status(), days)
+    elif verdict == Verdict.DELETE_WARN:
+        days = threshold_settings.get_delete_warning_days()
+        message = h_formats.action_msg_fmt.format(
+            inst_dec.get_status(), days)
     return message
 
 
@@ -452,7 +480,8 @@ def get_verdict(inst_dec, configuration):
     elif threshold_settings.should_delete_warn(inst_dec):
         verdict = Verdict.DELETE_WARN
     message = get_action_message(inst_dec, verdict, threshold_settings)
-    return verdict, message
+    inst_dec.add_action_message(message)
+    return verdict
 
 
 def get_violating_instances(project_names, configuration):
@@ -504,9 +533,8 @@ def get_violating_instances(project_names, configuration):
 
         for instance in instances_list:
             inst_dec = InstanceDecorator(instance, nova)
-            verdict, message = get_verdict(inst_dec, configuration)
+            verdict = get_verdict(inst_dec, configuration)
             if verdict != Verdict.DO_NOTHING:
-                inst_dec.add_action_message(message)
                 add_instance_to_dicts(project, inst_dec, verdict)
 
     return {'instances_to_shelve': instances_to_shelve,
