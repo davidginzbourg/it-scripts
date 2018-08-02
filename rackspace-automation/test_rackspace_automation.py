@@ -345,10 +345,10 @@ class TestInstanceDecorator(unittest.TestCase):
 
         # Create transitions the instance into a running state.
         actions_log = [
-            MockAction('os-start', target_date),
-            MockAction('os-stop', dt.datetime(1992, 1, 1).isoformat()),
-            MockAction('os-start', dt.datetime(1993, 1, 1).isoformat()),
-            MockAction('os-stop', dt.datetime(1994, 1, 1).isoformat()),
+            MockAction('start', target_date),
+            MockAction('stop', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('start', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('stop', dt.datetime(1994, 1, 1).isoformat()),
             MockAction('create', dt.datetime(1991, 1, 1).isoformat())
         ]
 
@@ -386,10 +386,10 @@ class TestInstanceDecorator(unittest.TestCase):
 
         # Create transitions the instance into a running state.
         actions_log = [
-            MockAction('os-stop', target_date),
-            MockAction('os-start', dt.datetime(1995, 1, 1).isoformat()),
-            MockAction('os-stop', dt.datetime(1992, 1, 1).isoformat()),
-            MockAction('os-start', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('stop', target_date),
+            MockAction('start', dt.datetime(1995, 1, 1).isoformat()),
+            MockAction('stop', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('start', dt.datetime(1993, 1, 1).isoformat()),
             MockAction('create', dt.datetime(1991, 1, 1).isoformat())
         ]
 
@@ -893,7 +893,7 @@ class TestGeneral(unittest.TestCase):
     def test_get_transition(self):
         to_running = 'create'
         to_shelved = 'shelve'
-        to_stopped = 'suspend'
+        to_stopped = 'stop'
         get_transition = rackspace_automation.get_transition
         self.assertEqual(get_transition(to_running),
                          StateTransition.TO_RUNNING)
