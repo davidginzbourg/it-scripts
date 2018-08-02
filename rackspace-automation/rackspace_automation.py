@@ -451,12 +451,12 @@ def get_action_message(inst_dec, verdict, threshold_settings):
             days_remaining = get_days_remaining(
                 inst_dec.running_since(),
                 threshold_settings.shelve_running_threshold)
-            days = threshold_settings.get_shelve_running_warning_days()
+            days = threshold_settings.get_shelve_running_days()
         elif inst_dec.is_stopped:
             days_remaining = get_days_remaining(
                 inst_dec.stopped_since(),
                 threshold_settings.shelve_stopped_threshold)
-            days = threshold_settings.get_shelve_stopped_warning_days()
+            days = threshold_settings.get_shelve_stopped_days()
         message = h_formats.shlv_wrn_msg_fmt.format(
             days_remaining, inst_dec.get_status(), days)
 

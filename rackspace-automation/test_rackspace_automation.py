@@ -1326,7 +1326,7 @@ class TestGeneral(unittest.TestCase):
         verdict = rackspace_automation.Verdict.SHELVE_WARN
         threshold_settings = MagicMock()
         threshold_settings.shelve_running_threshold = 5 * 24 * 60 * 60
-        threshold_settings.get_shelve_running_warning_days = MagicMock(
+        threshold_settings.get_shelve_running_days = MagicMock(
             return_value=5)
 
         expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
@@ -1348,7 +1348,7 @@ class TestGeneral(unittest.TestCase):
         verdict = rackspace_automation.Verdict.SHELVE_WARN
         threshold_settings = MagicMock()
         threshold_settings.shelve_stopped_threshold = 5 * 24 * 60 * 60
-        threshold_settings.get_shelve_stopped_warning_days = MagicMock(
+        threshold_settings.get_shelve_stopped_days = MagicMock(
             return_value=5)
 
         expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
