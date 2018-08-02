@@ -25,6 +25,7 @@ DRY_RUN = True
 INSTANCE_SETTINGS = 'instance_settings'
 GLOBAL_SETTINGS = 'settings'
 EMAIL_ADDRESSES = 'email_addresses'
+TENANT_SETTINGS = 'tenant_settings'
 PROJECT_NAME = 'project_name'
 INSTANCE_ID = 'instance_id'
 SHELVE_RUNNING_WARNING_THRESHOLD = 'shelve_running_warning_threshold'
@@ -595,8 +596,26 @@ def fetch_configuration(spreadsheet_creds):
     """
     return {INSTANCE_SETTINGS: fetch_instance_settings(spreadsheet_creds),
             GLOBAL_SETTINGS: fetch_global_settings(spreadsheet_creds),
-            EMAIL_ADDRESSES: fetch_email_addresses(spreadsheet_creds)}
+            EMAIL_ADDRESSES: fetch_email_addresses(spreadsheet_creds),
+            TENANT_SETTINGS: fetch_tenant_settings(spreadsheet_creds)}
 
+
+def fetch_tenant_settings(spreadsheet_creds):
+    """
+    :param spreadsheet_creds: GSpread credentials.
+    :return: the tenant settings dict.
+    """
+    tenant_settings = {}
+    contents = get_worksheet_contents(spreadsheet_creds,
+                                      INSTANCE_SETTINGS_WORKSHEET)
+    if not contents:
+        return {}
+    for row_dict in contents:
+        validate_has_min_vals(row_dict)
+        project_name = row_dict[PROJECT_NAME]
+        tenant_settings[project_name] = TimeThresholdSettings(
+            **get_time_threshold_settings_params(row_dict))
+    return tenant_settings
 
 def get_worksheet_contents(spreadsheet_creds, worksheet_name):
     """
@@ -623,6 +642,34 @@ def parse_value(value):
     return v
 
 
+def get_time_threshold_settings_params(row_dict):
+    """
+    :param row_dict: dictionary representing the row.
+    :return: the parsed settings values.
+    """
+    shelve_running_warning_threshold = \
+        parse_value(row_dict[SHELVE_RUNNING_WARNING_THRESHOLD])
+    shelve_stopped_warning_threshold = \
+        parse_value(row_dict[SHELVE_STOPPED_WARNING_THRESHOLD])
+    delete_warning_threshold = \
+        parse_value(row_dict[DELETE_WARNING_THRESHOLD])
+    shelve_running_threshold = \
+        parse_value(row_dict[SHELVE_RUNNING_THRESHOLD])
+    shelve_stopped_threshold = \
+        parse_value(row_dict[SHELVE_STOPPED_THRESHOLD])
+    delete_shelved_threshold = \
+        parse_value(row_dict[DELETE_SHELVED_THRESHOLD])
+    return {
+        'shelve_running_warning_threshold':
+            shelve_running_warning_threshold,
+        'shelve_stopped_warning_threshold':
+            shelve_stopped_warning_threshold,
+        'delete_warning_threshold': delete_warning_threshold,
+        'shelve_running_threshold': shelve_running_threshold,
+        'shelve_stopped_threshold': shelve_stopped_threshold,
+        'delete_shelved_threshold': delete_shelved_threshold}
+
+
 def fetch_instance_settings(spreadsheet_creds):
     """Returns the instance settings.
 
@@ -632,36 +679,13 @@ def fetch_instance_settings(spreadsheet_creds):
         '(ID of) instance_j': TimeThresholdSettings
     }
     """
-
-    def get_time_threshold_settings_params(row_dict):
-        shelve_running_warning_threshold = \
-            parse_value(row_dict[SHELVE_RUNNING_WARNING_THRESHOLD])
-        shelve_stopped_warning_threshold = \
-            parse_value(row_dict[SHELVE_STOPPED_WARNING_THRESHOLD])
-        delete_warning_threshold = \
-            parse_value(row_dict[DELETE_WARNING_THRESHOLD])
-        shelve_running_threshold = \
-            parse_value(row_dict[SHELVE_RUNNING_THRESHOLD])
-        shelve_stopped_threshold = \
-            parse_value(row_dict[SHELVE_STOPPED_THRESHOLD])
-        delete_shelved_threshold = \
-            parse_value(row_dict[DELETE_SHELVED_THRESHOLD])
-        return {
-            'shelve_running_warning_threshold':
-                shelve_running_warning_threshold,
-            'shelve_stopped_warning_threshold':
-                shelve_stopped_warning_threshold,
-            'delete_warning_threshold': delete_warning_threshold,
-            'shelve_running_threshold': shelve_running_threshold,
-            'shelve_stopped_threshold': shelve_stopped_threshold,
-            'delete_shelved_threshold': delete_shelved_threshold}
-
     instance_settings = {}
     contents = get_worksheet_contents(spreadsheet_creds,
                                       INSTANCE_SETTINGS_WORKSHEET)
     if not contents:
         return {}
     for row_dict in contents:
+        validate_has_min_vals(row_dict)
         instance_id = row_dict[INSTANCE_ID]
         if instance_id:
             instance_settings[instance_id] = \
@@ -671,6 +695,21 @@ def fetch_instance_settings(spreadsheet_creds):
     return instance_settings
 
 
+def validate_has_min_vals(row):
+    """Validates that the row has all the basic required keys.
+
+    Raises RackspaceAutomationException when row is in an invalid format.
+    :param row: row in the spreadsheet.
+    """
+    if 'shelve_running_warning_threshold' not in row \
+            or 'shelve_stopped_warning_threshold' not in row \
+            or 'delete_warning_threshold' not in row \
+            or 'shelve_running_threshold' not in row \
+            or 'shelve_stopped_threshold' not in row \
+            or 'delete_shelved_threshold' not in row:
+        raise RackspaceAutomationException("Invalid threshold settings.")
+
+
 def fetch_global_settings(spreadsheet_creds):
     """Returns the global settings from the Spreadsheet.
 
@@ -678,21 +717,10 @@ def fetch_global_settings(spreadsheet_creds):
     :return: global settings of the program.
     :rtype: TimeThresholdSettings
     """
-
-    def validate_row(row):
-        if 'shelve_running_warning_threshold' not in row \
-                or 'shelve_stopped_warning_threshold' not in row \
-                or 'delete_warning_threshold' not in row \
-                or 'shelve_running_threshold' not in row \
-                or 'shelve_stopped_threshold' not in row \
-                or 'delete_shelved_threshold' not in row:
-            raise RackspaceAutomationException("Invalid global threshold "
-                                               "settings.")
-
     contents = get_worksheet_contents(spreadsheet_creds, SETTINGS_WORKSHEET)
     if not contents:
         raise RackspaceAutomationException("Settings worksheet is empty.")
-    validate_row(contents[0])
+    validate_has_min_vals(contents[0])
     for key in contents[0].keys():
         contents[0][key] = parse_value(contents[0][key])
     return TimeThresholdSettings(**contents[0])

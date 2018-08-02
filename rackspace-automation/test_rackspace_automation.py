@@ -741,54 +741,127 @@ class TestGeneral(unittest.TestCase):
         self.assertFalse(rackspace_automation.fetch_instance_settings(None),
                          "Fetch instance settings returned a non-empty dict.")
 
+        contents.extend([{}])
+        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+                          rackspace_automation.fetch_instance_settings, None)
+        del contents[:]
+
         inst1 = 'inst1'
-        inst_set1 = {rackspace_automation.INSTANCE_ID: inst1,
-                     'shelve_running_warning_threshold':
-                         '',
-                     'shelve_stopped_warning_threshold':
-                         1.0,
-                     'delete_warning_threshold': 2.0,
-                     'shelve_running_threshold': '',
-                     'shelve_stopped_threshold': 4.0,
-                     'delete_shelved_threshold': 5.0}
+        inst_dict1 = {rackspace_automation.INSTANCE_ID: inst1,
+                      'shelve_running_warning_threshold':
+                          '',
+                      'shelve_stopped_warning_threshold':
+                          1.0,
+                      'delete_warning_threshold': 2.0,
+                      'shelve_running_threshold': '',
+                      'shelve_stopped_threshold': 4.0,
+                      'delete_shelved_threshold': 5.0}
         inst2 = 'inst2'
-        inst_set2 = {rackspace_automation.INSTANCE_ID: inst2,
-                     'shelve_running_warning_threshold':
-                         10.0,
-                     'shelve_stopped_warning_threshold':
-                         11.0,
-                     'delete_warning_threshold': 12.0,
-                     'shelve_running_threshold': 13.0,
-                     'shelve_stopped_threshold': 14.0,
-                     'delete_shelved_threshold': 15.0}
+        inst_dict2 = {rackspace_automation.INSTANCE_ID: inst2,
+                      'shelve_running_warning_threshold':
+                          10.0,
+                      'shelve_stopped_warning_threshold':
+                          11.0,
+                      'delete_warning_threshold': 12.0,
+                      'shelve_running_threshold': 13.0,
+                      'shelve_stopped_threshold': 14.0,
+                      'delete_shelved_threshold': 15.0}
         inst3 = 'inst3'
-        inst_set3 = {rackspace_automation.INSTANCE_ID: inst3,
-                     'shelve_running_warning_threshold':
-                         110.0,
-                     'shelve_stopped_warning_threshold':
-                         111.0,
-                     'delete_warning_threshold': 112.0,
-                     'shelve_running_threshold': 113.0,
-                     'shelve_stopped_threshold': 114.0,
-                     'delete_shelved_threshold': 115.0}
-        row1 = inst_set1
-        row2 = inst_set2
-        row3 = inst_set3
+        inst_dict3 = {rackspace_automation.INSTANCE_ID: inst3,
+                      'shelve_running_warning_threshold':
+                          110.0,
+                      'shelve_stopped_warning_threshold':
+                          111.0,
+                      'delete_warning_threshold': 112.0,
+                      'shelve_running_threshold': 113.0,
+                      'shelve_stopped_threshold': 114.0,
+                      'delete_shelved_threshold': 115.0}
+        row1 = inst_dict1
+        row2 = inst_dict2
+        row3 = inst_dict3
         contents.extend([row1, row2, row3])
 
         result = rackspace_automation.fetch_instance_settings(None)
 
         # This must be done in order to successfully do the double
         # 'dereference'
-        for inst in [inst_set1, inst_set2, inst_set3]:
+        for inst in [inst_dict1, inst_dict2, inst_dict3]:
             del inst[rackspace_automation.INSTANCE_ID]
 
-        inst_set1['shelve_running_warning_threshold'] = float('inf')
-        inst_set1['shelve_running_threshold'] = float('inf')
+        inst_dict1['shelve_running_warning_threshold'] = float('inf')
+        inst_dict1['shelve_running_threshold'] = float('inf')
         correct_result = {
-            inst1: rackspace_automation.TimeThresholdSettings(**inst_set1),
-            inst3: rackspace_automation.TimeThresholdSettings(**inst_set3),
-            inst2: rackspace_automation.TimeThresholdSettings(**inst_set2)
+            inst1: rackspace_automation.TimeThresholdSettings(**inst_dict1),
+            inst3: rackspace_automation.TimeThresholdSettings(**inst_dict3),
+            inst2: rackspace_automation.TimeThresholdSettings(**inst_dict2)
+        }
+
+        self.assertDictEqual(result, correct_result, "Result dict isn't "
+                                                     "correct.")
+
+    @mock.patch('rackspace_automation.get_worksheet_contents')
+    def test_fetch_tenant_settings(self, mock_contents):
+        """Tests fetch_instance_settings.
+        """
+        contents = []
+        mock_contents.return_value = contents
+
+        self.assertFalse(rackspace_automation.fetch_tenant_settings(None),
+                         "Fetch tenant settings returned a non-empty dict.")
+
+        contents.extend([{}])
+        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+                          rackspace_automation.fetch_tenant_settings, None)
+        del contents[:]
+
+        proj1 = 'proj1'
+        proj_dict1 = {rackspace_automation.PROJECT_NAME: proj1,
+                      'shelve_running_warning_threshold':
+                          '',
+                      'shelve_stopped_warning_threshold':
+                          1.0,
+                      'delete_warning_threshold': 2.0,
+                      'shelve_running_threshold': '',
+                      'shelve_stopped_threshold': 4.0,
+                      'delete_shelved_threshold': 5.0}
+        proj2 = 'proj2'
+        proj_dict2 = {rackspace_automation.PROJECT_NAME: proj2,
+                      'shelve_running_warning_threshold':
+                          10.0,
+                      'shelve_stopped_warning_threshold':
+                          11.0,
+                      'delete_warning_threshold': 12.0,
+                      'shelve_running_threshold': 13.0,
+                      'shelve_stopped_threshold': 14.0,
+                      'delete_shelved_threshold': 15.0}
+        proj3 = 'proj3'
+        proj_dict3 = {rackspace_automation.PROJECT_NAME: proj3,
+                      'shelve_running_warning_threshold':
+                          110.0,
+                      'shelve_stopped_warning_threshold':
+                          111.0,
+                      'delete_warning_threshold': 112.0,
+                      'shelve_running_threshold': 113.0,
+                      'shelve_stopped_threshold': 114.0,
+                      'delete_shelved_threshold': 115.0}
+        row1 = proj_dict1
+        row2 = proj_dict2
+        row3 = proj_dict3
+        contents.extend([row1, row2, row3])
+
+        result = rackspace_automation.fetch_tenant_settings(None)
+
+        # This must be done in order to successfully do the double
+        # 'dereference'
+        for inst in [proj_dict1, proj_dict2, proj_dict3]:
+            del inst[rackspace_automation.PROJECT_NAME]
+
+        proj_dict1['shelve_running_warning_threshold'] = float('inf')
+        proj_dict1['shelve_running_threshold'] = float('inf')
+        correct_result = {
+            proj1: rackspace_automation.TimeThresholdSettings(**proj_dict1),
+            proj3: rackspace_automation.TimeThresholdSettings(**proj_dict3),
+            proj2: rackspace_automation.TimeThresholdSettings(**proj_dict2)
         }
 
         self.assertDictEqual(result, correct_result, "Result dict isn't "
