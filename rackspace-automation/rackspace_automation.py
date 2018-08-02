@@ -44,6 +44,7 @@ SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
 SETTINGS_WORKSHEET = os.environ.get('SETTINGS_WORKSHEET')
 EMAIL_ADDRESSES_WORKSHEET = os.environ.get('EMAIL_ADDRESSES_WORKSHEET')
 INSTANCE_SETTINGS_WORKSHEET = os.environ.get('INSTANCE_SETTINGS_WORKSHEET')
+TENANT_SETTINGS_WORKSHEET = os.environ.get('TENANT_SETTINGS_WORKSHEET')
 OPENSTACK_MAIN_PROJECT = os.environ.get('OPENSTACK_MAIN_PROJECT')
 OPENSTACK_URL = os.environ.get('OPENSTACK_URL')
 OPENSTACK_USERNAME = os.environ.get('OPENSTACK_USERNAME')
@@ -618,7 +619,7 @@ def fetch_tenant_settings(spreadsheet_creds):
     """
     tenant_settings = {}
     contents = get_worksheet_contents(spreadsheet_creds,
-                                      INSTANCE_SETTINGS_WORKSHEET)
+                                      TENANT_SETTINGS_WORKSHEET)
     if not contents:
         return {}
     for row_dict in contents:

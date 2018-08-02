@@ -601,6 +601,7 @@ class TestGeneral(unittest.TestCase):
             'SETTINGS_WORKSHEET': 'value_settings_worksheet',
             'EMAIL_ADDRESSES_WORKSHEET': 'value_email_addresses_worksheet',
             'INSTANCE_SETTINGS_WORKSHEET': 'value_instance_settings_worksheet',
+            'TENANT_SETTINGS_WORKSHEET': 'value_tenant_settings_worksheet',
             'OPENSTACK_MAIN_PROJECT': 'value_openstack_main_project',
             'OPENSTACK_URL': 'value_openstack_url',
             'OPENSTACK_USERNAME': 'value_openstack_username',
@@ -622,6 +623,8 @@ class TestGeneral(unittest.TestCase):
             'EMAIL_ADDRESSES_WORKSHEET']
         rackspace_automation.INSTANCE_SETTINGS_WORKSHEET = self.os_environ[
             'INSTANCE_SETTINGS_WORKSHEET']
+        rackspace_automation.TENANT_SETTINGS_WORKSHEET = self.os_environ[
+            'TENANT_SETTINGS_WORKSHEET']
         rackspace_automation.OPENSTACK_MAIN_PROJECT = self.os_environ[
             'OPENSTACK_MAIN_PROJECT']
         rackspace_automation.OPENSTACK_URL = self.os_environ[
@@ -676,6 +679,7 @@ class TestGeneral(unittest.TestCase):
     def test_fetch_email_addresses(self, mock_contents):
         """Tests the fetch_email_addresses function.
         """
+        rackspace_automation.EMAIL_ADDRESSES_WORKSHEET = 'something'
         contents = []
         mock_contents.return_value = contents
 
@@ -703,11 +707,15 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(result[tenant2], email2, 'first email address was '
                                                   'not found')
 
+        mock_contents.assert_called_with(
+            None, rackspace_automation.EMAIL_ADDRESSES_WORKSHEET)
+
     @mock.patch('rackspace_automation.TimeThresholdSettings')
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_global_settings(self, mock_contents, mock_ttsettings):
         """Tests the fetch_global_settings function.
         """
+        rackspace_automation.SETTINGS_WORKSHEET = 'something'
         contents = []
         mock_contents.return_value = contents
         self.assertRaises(glb_exc_class,
@@ -738,11 +746,14 @@ class TestGeneral(unittest.TestCase):
                         'delete_shelved_threshold': float(val6)}
         rackspace_automation.fetch_global_settings(None)
         mock_ttsettings.assert_called_with(**expected_res)
+        mock_contents.assert_called_with(
+            None, rackspace_automation.SETTINGS_WORKSHEET)
 
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_instance_settings(self, mock_contents):
         """Tests fetch_instance_settings.
         """
+        rackspace_automation.INSTANCE_SETTINGS_WORKSHEET = 'something'
         contents = []
         mock_contents.return_value = contents
 
@@ -807,10 +818,12 @@ class TestGeneral(unittest.TestCase):
         self.assertDictEqual(result, correct_result, "Result dict isn't "
                                                      "correct.")
 
+        mock_contents.assert_called_with(
+            None, rackspace_automation.INSTANCE_SETTINGS_WORKSHEET)
+
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_tenant_settings(self, mock_contents):
-        """Tests fetch_instance_settings.
-        """
+        rackspace_automation.TENANT_SETTINGS_WORKSHEET = 'something'
         contents = []
         mock_contents.return_value = contents
 
@@ -874,6 +887,8 @@ class TestGeneral(unittest.TestCase):
 
         self.assertDictEqual(result, correct_result, "Result dict isn't "
                                                      "correct.")
+        mock_contents.assert_called_with(
+            None, rackspace_automation.TENANT_SETTINGS_WORKSHEET)
 
     def test_get_transition(self):
         to_running = 'create'
@@ -1227,136 +1242,49 @@ class TestGeneral(unittest.TestCase):
     def test_get_spreadsheet_creds(self):
         pass
 
-    # @mock.patch('rackspace_automation.get_ses_client')
-    # def test_send_email(self, mock_get_ses):
-    #     mock_ses = MagicMock()
-    #     mock_get_ses.return_value = mock_ses
-    #     mock_ses.send_email = MagicMock()
-    #
-    #     rackspace_automation.SOURCE_EMAIL_ADDRESS = 'source_email'
-    #     items_dict = {'tenant1': ['i1']}
-    #     configuration = {rackspace_automation.EMAIL_ADDRESSES:
-    #                          {'tenant1': 'destination'}}
-    #     rackspace_automation.send_email(configuration, items_dict, 'subject',
-    #                                     'message')
-    #
-    #     mock_ses.send_email.assert_called_with(
-    #         Source='source_email',
-    #         Destination={'ToAddresses': ['destination']},
-    #         Message={
-    #             'Subject': {
-    #                 'Data': 'subject'},
-    #             'Body': {
-    #                 'Html': {
-    #                     'Data': 'message'}}
-    #         })
-    #
-    # @mock.patch('rackspace_automation.send_email')
-    # def test_send_warnings(self, mock_send_email):
-    #     configuration = 'conf'
-    #     shelve_warnings = 'shelve_warnings'
-    #     delete_warnings = 'delete_warnings'
-    #     rackspace_automation.send_warnings(configuration, shelve_warnings,
-    #                                        delete_warnings)
-    #
-    #     mock_send_email.assert_any_call(
-    #         configuration, shelve_warnings,
-    #         rackspace_automation.SHELVE_WARNING_SUBJ,
-    #         rackspace_automation.SHELVE_WARNING_MSG)
-    #
-    #     mock_send_email.assert_any_call(
-    #         configuration, delete_warnings,
-    #         rackspace_automation.DELETE_WARNING_SUBJ,
-    #         rackspace_automation.DELETE_WARNING_MSG)
-    #
-    # @mock.patch('rackspace_automation.send_email')
-    # def test_delete_instances(self, mock_send_email):
-    #     configuration = 'conf'
-    #     inst1 = MagicMock()
-    #     inst2 = MagicMock()
-    #     inst1.delete = MagicMock()
-    #     inst2.delete = MagicMock()
-    #     instances_to_delete = {
-    #         'tenant1': [inst1, inst2]
-    #     }
-    #
-    #     rackspace_automation.delete_instances(configuration,
-    #                                           instances_to_delete)
-    #
-    #     inst1.delete.assert_called()
-    #     inst2.delete.assert_called()
-    #
-    #     mock_send_email.assert_any_call(
-    #         configuration, instances_to_delete,
-    #         rackspace_automation.DELETE_NOTIF_SUBJ,
-    #         rackspace_automation.DELETE_NOTIF_MSG)
-    #
-    # @mock.patch('rackspace_automation.send_email')
-    # def test_shelve_instances(self, mock_send_email):
-    #     configuration = 'conf'
-    #     inst1 = MagicMock()
-    #     inst2 = MagicMock()
-    #     inst1.shelve = MagicMock()
-    #     inst2.shelve = MagicMock()
-    #     instances_to_shelve = {
-    #         'tenant1': [inst1, inst2]
-    #     }
-    #
-    #     rackspace_automation.shelve_instances(configuration,
-    #                                           instances_to_shelve)
-    #
-    #     inst1.shelve.assert_called()
-    #     inst2.shelve.assert_called()
-    #
-    #     mock_send_email.assert_any_call(
-    #         configuration, instances_to_shelve,
-    #         rackspace_automation.SHELVE_NOTIF_SUBJ,
-    #         rackspace_automation.SHELVE_NOTIF_MSG)
-
     def test_add_missing_tenant_email_addresses(self):
         pass
 
     def test_all_os_vars(self):
         """Tests that all os variables are checked.
         """
-        os_environ_dict = {}
-        magic_mock = MagicMock()
-        magic_mock.mock.dict('os.environ', os_environ_dict)
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SOURCE_EMAIL_ADDRESS'] = 'something'
+        rackspace_automation.SOURCE_EMAIL_ADDRESS = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['CREDENTIALS_FILE_PATH'] = 'something'
+        rackspace_automation.CREDENTIALS_FILE_PATH = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SPREADSHEET_ID'] = 'something'
+        rackspace_automation.SPREADSHEET_ID = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SETTINGS_WORKSHEET'] = 'something'
+        rackspace_automation.SETTINGS_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['EMAIL_ADDRESSES_WORKSHEET'] = 'something'
+        rackspace_automation.EMAIL_ADDRESSES_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['INSTANCE_SETTINGS_WORKSHEET'] = 'something'
+        rackspace_automation.INSTANCE_SETTINGS_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_MAIN_PROJECT'] = 'something'
+        rackspace_automation.TENANT_SETTINGS_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_URL'] = 'something'
+        rackspace_automation.OPENSTACK_MAIN_PROJECT = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_USERNAME'] = 'something'
+        rackspace_automation.OPENSTACK_URL = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_PASSWORD'] = 'something'
+        rackspace_automation.OPENSTACK_USERNAME = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['DEFAULT_NOTIFICATION_EMAIL_ADDRESS'] = 'something'
+        rackspace_automation.OPENSTACK_PASSWORD = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
+        rackspace_automation.DEFAULT_NOTIFICATION_EMAIL_ADDRESS = 'something'
+        rackspace_automation.check_os_environ_vars()
 
     def test_get_action_message_shelve_running(self):
         inst_dec = MagicMock(is_running=True, is_stopped=False)
@@ -1490,3 +1418,5 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(
             rackspace_automation.get_days_remaining(some_date, threshold),
             'inf')
+
+# TODO: add notification email send tests
