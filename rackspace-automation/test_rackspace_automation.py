@@ -633,26 +633,31 @@ class TestGeneral(unittest.TestCase):
         rackspace_automation.DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
             self.os_environ['DEFAULT_NOTIFICATION_EMAIL_ADDRESS']
 
+    @mock.patch('rackspace_automation.fetch_tenant_settings')
     @mock.patch('rackspace_automation.fetch_email_addresses')
     @mock.patch('rackspace_automation.fetch_global_settings')
     @mock.patch('rackspace_automation.fetch_instance_settings')
     def test_fetch_configuration(self, mock_fetch_instance_settings,
                                  mock_fetch_global_settings,
-                                 mock_fetch_email_addresses):
+                                 mock_fetch_email_addresses,
+                                 mock_fetch_tenant_settings):
         """Tests fetch_configuration.
         """
         some_inst_settings = 'some_inst_settings'
         some_global_settings = 'some_global_settings'
         some_email_addr = 'some_email_addr'
+        some_project_name = 'some_project_name'
 
         mock_fetch_instance_settings.return_value = some_inst_settings
         mock_fetch_global_settings.return_value = some_global_settings
         mock_fetch_email_addresses.return_value = some_email_addr
+        mock_fetch_tenant_settings.return_value = some_project_name
 
         return_val = rackspace_automation.fetch_configuration('dummy_str')
         mock_fetch_instance_settings.assert_called()
         mock_fetch_global_settings.assert_called()
         mock_fetch_email_addresses.assert_called()
+        mock_fetch_tenant_settings.assert_called()
 
         self.assertEqual(return_val[rackspace_automation.INSTANCE_SETTINGS],
                          some_inst_settings,
@@ -663,6 +668,9 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(return_val[rackspace_automation.EMAIL_ADDRESSES],
                          some_email_addr,
                          'Email Addresses value is incorrect')
+        self.assertEqual(return_val[rackspace_automation.TENANT_SETTINGS],
+                         some_project_name,
+                         'Project name value is incorrect')
 
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_email_addresses(self, mock_contents):

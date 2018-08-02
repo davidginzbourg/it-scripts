@@ -587,6 +587,10 @@ def fetch_configuration(spreadsheet_creds):
         {
             '(ID of) instance_j': TimeThresholdSettings
         }
+    'tenant_settings':
+        {
+            'project_j': TimeThresholdSettings
+        }
     'settings': TimeThresholdSettings,
     'email_addresses': { 'tenant_name': 'email_address', ... }
     }
