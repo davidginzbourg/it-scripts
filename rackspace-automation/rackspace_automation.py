@@ -399,10 +399,12 @@ def get_transition(action_str):
     :return: a transition.
     :rtype: StateTransition
     """
-    to_running = {'create', 'rebuild', 'resume', 'os-start', 'start',
-                  'unpause', 'unshelve'}
+    to_running = {'create', 'rebuild', 'resume', 'restore', 'start',
+                  'unpause', 'unshelve', 'unrescue', 'set admin password',
+                  'backup', 'snapshot', 'reboot', 'revert resize',
+                  'confirm resize'}
     to_shelved = {'shelve', 'shelveOffload'}
-    to_stopped = {'pause', 'os-stop', 'stop', 'suspend'}
+    to_stopped = {'pause', 'stop', 'suspend', 'snapshot', 'backup'}
     if action_str in to_running:
         return StateTransition.TO_RUNNING
     if action_str in to_shelved:
