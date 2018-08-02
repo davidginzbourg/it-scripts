@@ -7,33 +7,6 @@ import rackspace_automation
 from mock import MagicMock
 from rackspace_automation import InstanceDecorator, StateTransition
 
-'''
-List of rackspace_automation functions:
-
-InstanceDecorator
-RackspaceAutomationException
-ServiceAccountCredentials
-StateTransition
-TimeThresholdSettings
-Verdict
-add_missing_tenant_email_addresses
-check_os_environ_vars
-delete_instances
-fetch_configuration
-fetch_email_addresses
-fetch_global_settings
-fetch_instance_settings
-get_credentials
-get_spreadsheet_creds
-get_tenant_names
-get_transition
-get_verdict
-get_violating_instances
-main
-send_warnings
-shelve
-'''
-
 SECONDS_TO_DAYS = 86400
 glb_exc_class = rackspace_automation.RackspaceAutomationException
 
@@ -68,8 +41,10 @@ class MockInstDecNova:
 
 
 class MockAction:
-    def __init__(self, action):
+    def __init__(self, action, start_time=None):
         self._action = action
+        self._start_time = start_time if start_time else \
+            TestInstanceDecorator.fixed_test_date
 
     @property
     def action(self):
@@ -77,7 +52,7 @@ class MockAction:
 
     @property
     def start_time(self):
-        return TestInstanceDecorator.fixed_test_date
+        return self._start_time
 
 
 class TestTimeThresholdSettings(unittest.TestCase):
@@ -257,14 +232,12 @@ class TestTimeThresholdSettings(unittest.TestCase):
         is_above_threshold = rackspace_automation.TimeThresholdSettings \
             .is_above_threshold
 
-
         time = dt.datetime(now_year, now_month, now_day).isoformat()
         self.assertFalse(is_above_threshold(time, float('inf')))
 
         time = dt.datetime(now_year, now_month, now_day).isoformat()
         self.assertFalse(is_above_threshold(time, 0))
 
-        time = dt.datetime(now_year, now_month, now_day).isoformat()
         self.assertFalse(is_above_threshold(None, 10))
 
         time = dt.datetime(now_year, now_month, now_day).isoformat()
@@ -281,6 +254,36 @@ class TestTimeThresholdSettings(unittest.TestCase):
         time = dt.datetime(
             now_year, now_month, now_day - threshold_days).isoformat()
         self.assertTrue(is_above_threshold(time, threshold_seconds))
+
+    def test_get_shelve_running_warning_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_running_warning_threshold = 86401  # a little more than 1 day
+        self.assertEqual(tts.get_shelve_running_warning_days(), '1.0')
+
+    def test_get_shelve_stopped_warning_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_stopped_warning_threshold = 86401  # a little more than 1 day
+        self.assertEqual(tts.get_shelve_stopped_warning_days(), '1.0')
+
+    def test_get_delete_warning_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.delete_warning_threshold = 86401  # a little more than 1 day
+        self.assertEqual(tts.get_delete_warning_days(), '1.0')
+
+    def test_get_shelve_running_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_running_threshold = 86401  # a little more than 1 day
+        self.assertEqual(tts.get_shelve_running_days(), '1.0')
+
+    def test_get_shelve_stopped_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.shelve_stopped_threshold = 86401  # a little more than 1 day
+        self.assertEqual(tts.get_shelve_stopped_days(), '1.0')
+
+    def test_get_delete_shelved_days(self):
+        tts = rackspace_automation.TimeThresholdSettings(*[2, 3, 2, 3, 2, 3])
+        tts.delete_shelved_threshold = 86401  # a little more than 1 day
+        self.assertEqual(tts.get_delete_shelved_days(), '1.0')
 
 
 class TestInstanceDecorator(unittest.TestCase):
@@ -338,11 +341,19 @@ class TestInstanceDecorator(unittest.TestCase):
         instance = MagicMock()
         setattr(instance, 'OS-EXT-STS:vm_state', 'active')
 
+        target_date = dt.datetime(1995, 1, 1).isoformat()
+
         # Create transitions the instance into a running state.
-        actions_log = [MockAction('shelve'), MockAction('create')]
+        actions_log = [
+            MockAction('start', target_date),
+            MockAction('stop', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('start', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('stop', dt.datetime(1994, 1, 1).isoformat()),
+            MockAction('create', dt.datetime(1991, 1, 1).isoformat())
+        ]
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
-        self.assertEqual(inst_dec.running_since(), self.fixed_test_date)
+        self.assertEqual(inst_dec.running_since(), target_date)
 
     def test_stopped_since_no_actions_log(self):
         inst_dec = InstanceDecorator(None, MockInstDecNova([]))
@@ -371,11 +382,19 @@ class TestInstanceDecorator(unittest.TestCase):
         instance = MagicMock()
         setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
 
+        target_date = dt.datetime(1994, 1, 1).isoformat()
+
         # Create transitions the instance into a running state.
-        actions_log = [MockAction('shelve'), MockAction('pause')]
+        actions_log = [
+            MockAction('stop', target_date),
+            MockAction('start', dt.datetime(1995, 1, 1).isoformat()),
+            MockAction('stop', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('start', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('create', dt.datetime(1991, 1, 1).isoformat())
+        ]
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
-        self.assertEqual(inst_dec.stopped_since(), self.fixed_test_date)
+        self.assertEqual(inst_dec.stopped_since(), target_date)
 
     def test_shelved_since_no_actions_log(self):
         inst_dec = InstanceDecorator(None, MockInstDecNova([]))
@@ -404,11 +423,19 @@ class TestInstanceDecorator(unittest.TestCase):
         instance = MagicMock()
         setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
 
+        target_date = dt.datetime(1994, 1, 1).isoformat()
+
         # Create transitions the instance into a running state.
-        actions_log = [MockAction('pause'), MockAction('shelve')]
+        actions_log = [
+            MockAction('pause', dt.datetime(1993, 1, 1).isoformat()),
+            MockAction('shelve', dt.datetime(1992, 1, 1).isoformat()),
+            MockAction('pause', dt.datetime(1995, 1, 1).isoformat()),
+            MockAction('shelve', target_date),
+            MockAction('create', dt.datetime(1991, 1, 1).isoformat())
+        ]
 
         inst_dec = InstanceDecorator(instance, MockInstDecNova(actions_log))
-        self.assertEqual(inst_dec.shelved_since(), self.fixed_test_date)
+        self.assertEqual(inst_dec.shelved_since(), target_date)
 
     def test_delete_dry_run(self):
         rackspace_automation.DRY_RUN = True
@@ -420,6 +447,7 @@ class TestInstanceDecorator(unittest.TestCase):
         res = inst_dec.delete()
         instance.delete.assert_not_called()
         self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
 
     def test_delete(self):
         rackspace_automation.DRY_RUN = False
@@ -432,6 +460,19 @@ class TestInstanceDecorator(unittest.TestCase):
         res = inst_dec.delete()
         instance.delete.assert_called()
         self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_delete_failed(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.delete = MagicMock(return_value=[-1])
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.delete()
+        instance.delete.assert_called()
+        self.assertFalse(res)
+        self.assertFalse(inst_dec.get_last_action_result())
 
     def test_shelve_dry_run(self):
         rackspace_automation.DRY_RUN = True
@@ -455,6 +496,99 @@ class TestInstanceDecorator(unittest.TestCase):
         res = inst_dec.shelve()
         instance.shelve.assert_called()
         self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_shelve_failed(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.shelve = MagicMock(return_value=[-1])
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.shelve()
+        instance.shelve.assert_called()
+        self.assertFalse(res)
+        self.assertFalse(inst_dec.get_last_action_result())
+
+    def test_get_status_returns_running(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'running')
+
+    def test_get_status_returns_stopped(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'stopped')
+
+    def test_get_status_returns_shelved(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'shelved')
+
+    def test_get_status_returns_unknown(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'say_what?')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertEqual(inst_dec.get_status(), 'unknown')
+
+    def test_is_running_true(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertTrue(inst_dec.is_running)
+
+    def test_is_running_false(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertFalse(inst_dec.is_running)
+
+    def test_is_stopped_true(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'stopped')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertTrue(inst_dec.is_stopped)
+
+    def test_is_stopped_false(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertFalse(inst_dec.is_stopped)
+
+    def test_is_shelved_true(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'shelved_offloaded')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertTrue(inst_dec.is_shelved)
+
+    def test_is_shelved_false(self):
+        instance = MagicMock()
+
+        setattr(instance, 'OS-EXT-STS:vm_state', 'active')
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        self.assertFalse(inst_dec.is_shelved)
 
 
 class TestGeneral(unittest.TestCase):
@@ -467,6 +601,7 @@ class TestGeneral(unittest.TestCase):
             'SETTINGS_WORKSHEET': 'value_settings_worksheet',
             'EMAIL_ADDRESSES_WORKSHEET': 'value_email_addresses_worksheet',
             'INSTANCE_SETTINGS_WORKSHEET': 'value_instance_settings_worksheet',
+            'TENANT_SETTINGS_WORKSHEET': 'value_tenant_settings_worksheet',
             'OPENSTACK_MAIN_PROJECT': 'value_openstack_main_project',
             'OPENSTACK_URL': 'value_openstack_url',
             'OPENSTACK_USERNAME': 'value_openstack_username',
@@ -488,6 +623,8 @@ class TestGeneral(unittest.TestCase):
             'EMAIL_ADDRESSES_WORKSHEET']
         rackspace_automation.INSTANCE_SETTINGS_WORKSHEET = self.os_environ[
             'INSTANCE_SETTINGS_WORKSHEET']
+        rackspace_automation.TENANT_SETTINGS_WORKSHEET = self.os_environ[
+            'TENANT_SETTINGS_WORKSHEET']
         rackspace_automation.OPENSTACK_MAIN_PROJECT = self.os_environ[
             'OPENSTACK_MAIN_PROJECT']
         rackspace_automation.OPENSTACK_URL = self.os_environ[
@@ -499,26 +636,31 @@ class TestGeneral(unittest.TestCase):
         rackspace_automation.DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
             self.os_environ['DEFAULT_NOTIFICATION_EMAIL_ADDRESS']
 
+    @mock.patch('rackspace_automation.fetch_tenant_settings')
     @mock.patch('rackspace_automation.fetch_email_addresses')
     @mock.patch('rackspace_automation.fetch_global_settings')
     @mock.patch('rackspace_automation.fetch_instance_settings')
     def test_fetch_configuration(self, mock_fetch_instance_settings,
                                  mock_fetch_global_settings,
-                                 mock_fetch_email_addresses):
+                                 mock_fetch_email_addresses,
+                                 mock_fetch_tenant_settings):
         """Tests fetch_configuration.
         """
         some_inst_settings = 'some_inst_settings'
         some_global_settings = 'some_global_settings'
         some_email_addr = 'some_email_addr'
+        some_project_name = 'some_project_name'
 
         mock_fetch_instance_settings.return_value = some_inst_settings
         mock_fetch_global_settings.return_value = some_global_settings
         mock_fetch_email_addresses.return_value = some_email_addr
+        mock_fetch_tenant_settings.return_value = some_project_name
 
         return_val = rackspace_automation.fetch_configuration('dummy_str')
         mock_fetch_instance_settings.assert_called()
         mock_fetch_global_settings.assert_called()
         mock_fetch_email_addresses.assert_called()
+        mock_fetch_tenant_settings.assert_called()
 
         self.assertEqual(return_val[rackspace_automation.INSTANCE_SETTINGS],
                          some_inst_settings,
@@ -529,11 +671,15 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(return_val[rackspace_automation.EMAIL_ADDRESSES],
                          some_email_addr,
                          'Email Addresses value is incorrect')
+        self.assertEqual(return_val[rackspace_automation.TENANT_SETTINGS],
+                         some_project_name,
+                         'Project name value is incorrect')
 
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_email_addresses(self, mock_contents):
         """Tests the fetch_email_addresses function.
         """
+        rackspace_automation.EMAIL_ADDRESSES_WORKSHEET = 'something'
         contents = []
         mock_contents.return_value = contents
 
@@ -561,11 +707,15 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(result[tenant2], email2, 'first email address was '
                                                   'not found')
 
+        mock_contents.assert_called_with(
+            None, rackspace_automation.EMAIL_ADDRESSES_WORKSHEET)
+
     @mock.patch('rackspace_automation.TimeThresholdSettings')
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_global_settings(self, mock_contents, mock_ttsettings):
         """Tests the fetch_global_settings function.
         """
+        rackspace_automation.SETTINGS_WORKSHEET = 'something'
         contents = []
         mock_contents.return_value = contents
         self.assertRaises(glb_exc_class,
@@ -576,88 +726,174 @@ class TestGeneral(unittest.TestCase):
                           rackspace_automation.fetch_global_settings, None)
         del contents[:]
 
-        val1 = 'val1'
-        val2 = 'val2'
-        val3 = 'val3'
-        val4 = 'val4'
-        val5 = 'val5'
-        val6 = 'val6'
+        val1 = '1'
+        val2 = '2'
+        val3 = '3'
+        val4 = ''
+        val5 = '4'
+        val6 = '5'
         contents.extend([{'shelve_running_warning_threshold': val1,
                           'shelve_stopped_warning_threshold': val2,
                           'delete_warning_threshold': val3,
                           'shelve_running_threshold': val4,
                           'shelve_stopped_threshold': val5,
                           'delete_shelved_threshold': val6}])
+        expected_res = {'shelve_running_warning_threshold': float(val1),
+                        'shelve_stopped_warning_threshold': float(val2),
+                        'delete_warning_threshold': float(val3),
+                        'shelve_running_threshold': float('inf'),
+                        'shelve_stopped_threshold': float(val5),
+                        'delete_shelved_threshold': float(val6)}
         rackspace_automation.fetch_global_settings(None)
-        mock_ttsettings.assert_called_with(**contents[0])
+        mock_ttsettings.assert_called_with(**expected_res)
+        mock_contents.assert_called_with(
+            None, rackspace_automation.SETTINGS_WORKSHEET)
 
     @mock.patch('rackspace_automation.get_worksheet_contents')
     def test_fetch_instance_settings(self, mock_contents):
         """Tests fetch_instance_settings.
         """
+        rackspace_automation.INSTANCE_SETTINGS_WORKSHEET = 'something'
         contents = []
         mock_contents.return_value = contents
 
         self.assertFalse(rackspace_automation.fetch_instance_settings(None),
                          "Fetch instance settings returned a non-empty dict.")
 
+        contents.extend([{}])
+        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+                          rackspace_automation.fetch_instance_settings, None)
+        del contents[:]
+
         inst1 = 'inst1'
-        inst_set1 = {rackspace_automation.INSTANCE_ID: inst1,
-                     'shelve_running_warning_threshold':
-                         '',
-                     'shelve_stopped_warning_threshold':
-                         1.0,
-                     'delete_warning_threshold': 2.0,
-                     'shelve_running_threshold': '',
-                     'shelve_stopped_threshold': 4.0,
-                     'delete_shelved_threshold': 5.0}
+        inst_dict1 = {rackspace_automation.INSTANCE_ID: inst1,
+                      'shelve_running_warning_threshold':
+                          '',
+                      'shelve_stopped_warning_threshold':
+                          1.0,
+                      'delete_warning_threshold': 2.0,
+                      'shelve_running_threshold': '',
+                      'shelve_stopped_threshold': 4.0,
+                      'delete_shelved_threshold': 5.0}
         inst2 = 'inst2'
-        inst_set2 = {rackspace_automation.INSTANCE_ID: inst2,
-                     'shelve_running_warning_threshold':
-                         10.0,
-                     'shelve_stopped_warning_threshold':
-                         11.0,
-                     'delete_warning_threshold': 12.0,
-                     'shelve_running_threshold': 13.0,
-                     'shelve_stopped_threshold': 14.0,
-                     'delete_shelved_threshold': 15.0}
+        inst_dict2 = {rackspace_automation.INSTANCE_ID: inst2,
+                      'shelve_running_warning_threshold':
+                          10.0,
+                      'shelve_stopped_warning_threshold':
+                          11.0,
+                      'delete_warning_threshold': 12.0,
+                      'shelve_running_threshold': 13.0,
+                      'shelve_stopped_threshold': 14.0,
+                      'delete_shelved_threshold': 15.0}
         inst3 = 'inst3'
-        inst_set3 = {rackspace_automation.INSTANCE_ID: inst3,
-                     'shelve_running_warning_threshold':
-                         110.0,
-                     'shelve_stopped_warning_threshold':
-                         111.0,
-                     'delete_warning_threshold': 112.0,
-                     'shelve_running_threshold': 113.0,
-                     'shelve_stopped_threshold': 114.0,
-                     'delete_shelved_threshold': 115.0}
-        row1 = inst_set1
-        row2 = inst_set2
-        row3 = inst_set3
+        inst_dict3 = {rackspace_automation.INSTANCE_ID: inst3,
+                      'shelve_running_warning_threshold':
+                          110.0,
+                      'shelve_stopped_warning_threshold':
+                          111.0,
+                      'delete_warning_threshold': 112.0,
+                      'shelve_running_threshold': 113.0,
+                      'shelve_stopped_threshold': 114.0,
+                      'delete_shelved_threshold': 115.0}
+        row1 = inst_dict1
+        row2 = inst_dict2
+        row3 = inst_dict3
         contents.extend([row1, row2, row3])
 
         result = rackspace_automation.fetch_instance_settings(None)
 
         # This must be done in order to successfully do the double
         # 'dereference'
-        for inst in [inst_set1, inst_set2, inst_set3]:
+        for inst in [inst_dict1, inst_dict2, inst_dict3]:
             del inst[rackspace_automation.INSTANCE_ID]
 
-        inst_set1['shelve_running_warning_threshold'] = float('inf')
-        inst_set1['shelve_running_threshold'] = float('inf')
+        inst_dict1['shelve_running_warning_threshold'] = float('inf')
+        inst_dict1['shelve_running_threshold'] = float('inf')
         correct_result = {
-            inst1: rackspace_automation.TimeThresholdSettings(**inst_set1),
-            inst3: rackspace_automation.TimeThresholdSettings(**inst_set3),
-            inst2: rackspace_automation.TimeThresholdSettings(**inst_set2)
+            inst1: rackspace_automation.TimeThresholdSettings(**inst_dict1),
+            inst3: rackspace_automation.TimeThresholdSettings(**inst_dict3),
+            inst2: rackspace_automation.TimeThresholdSettings(**inst_dict2)
         }
 
         self.assertDictEqual(result, correct_result, "Result dict isn't "
                                                      "correct.")
 
+        mock_contents.assert_called_with(
+            None, rackspace_automation.INSTANCE_SETTINGS_WORKSHEET)
+
+    @mock.patch('rackspace_automation.get_worksheet_contents')
+    def test_fetch_tenant_settings(self, mock_contents):
+        rackspace_automation.TENANT_SETTINGS_WORKSHEET = 'something'
+        contents = []
+        mock_contents.return_value = contents
+
+        self.assertFalse(rackspace_automation.fetch_tenant_settings(None),
+                         "Fetch tenant settings returned a non-empty dict.")
+
+        contents.extend([{}])
+        self.assertRaises(rackspace_automation.RackspaceAutomationException,
+                          rackspace_automation.fetch_tenant_settings, None)
+        del contents[:]
+
+        proj1 = 'proj1'
+        proj_dict1 = {rackspace_automation.PROJECT_NAME: proj1,
+                      'shelve_running_warning_threshold':
+                          '',
+                      'shelve_stopped_warning_threshold':
+                          1.0,
+                      'delete_warning_threshold': 2.0,
+                      'shelve_running_threshold': '',
+                      'shelve_stopped_threshold': 4.0,
+                      'delete_shelved_threshold': 5.0}
+        proj2 = 'proj2'
+        proj_dict2 = {rackspace_automation.PROJECT_NAME: proj2,
+                      'shelve_running_warning_threshold':
+                          10.0,
+                      'shelve_stopped_warning_threshold':
+                          11.0,
+                      'delete_warning_threshold': 12.0,
+                      'shelve_running_threshold': 13.0,
+                      'shelve_stopped_threshold': 14.0,
+                      'delete_shelved_threshold': 15.0}
+        proj3 = 'proj3'
+        proj_dict3 = {rackspace_automation.PROJECT_NAME: proj3,
+                      'shelve_running_warning_threshold':
+                          110.0,
+                      'shelve_stopped_warning_threshold':
+                          111.0,
+                      'delete_warning_threshold': 112.0,
+                      'shelve_running_threshold': 113.0,
+                      'shelve_stopped_threshold': 114.0,
+                      'delete_shelved_threshold': 115.0}
+        row1 = proj_dict1
+        row2 = proj_dict2
+        row3 = proj_dict3
+        contents.extend([row1, row2, row3])
+
+        result = rackspace_automation.fetch_tenant_settings(None)
+
+        # This must be done in order to successfully do the double
+        # 'dereference'
+        for inst in [proj_dict1, proj_dict2, proj_dict3]:
+            del inst[rackspace_automation.PROJECT_NAME]
+
+        proj_dict1['shelve_running_warning_threshold'] = float('inf')
+        proj_dict1['shelve_running_threshold'] = float('inf')
+        correct_result = {
+            proj1: rackspace_automation.TimeThresholdSettings(**proj_dict1),
+            proj3: rackspace_automation.TimeThresholdSettings(**proj_dict3),
+            proj2: rackspace_automation.TimeThresholdSettings(**proj_dict2)
+        }
+
+        self.assertDictEqual(result, correct_result, "Result dict isn't "
+                                                     "correct.")
+        mock_contents.assert_called_with(
+            None, rackspace_automation.TENANT_SETTINGS_WORKSHEET)
+
     def test_get_transition(self):
         to_running = 'create'
         to_shelved = 'shelve'
-        to_stopped = 'suspend'
+        to_stopped = 'stop'
         get_transition = rackspace_automation.get_transition
         self.assertEqual(get_transition(to_running),
                          StateTransition.TO_RUNNING)
@@ -677,29 +913,81 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         global_settings.should_shelve = MagicMock(return_value=True)
 
-        rackspace_automation.get_verdict(inst_dec, configuration)
+        rackspace_automation.get_verdict(inst_dec, configuration, None)
         global_settings.should_shelve.assert_any_call(inst_dec)
 
-    def test_get_verdict_configuration_swap(self):
+    def test_get_verdict_tenant_with_instance_configuration_swap(self):
         inst_dec = MagicMock()
         inst_dec.id = 'inst1'
+
+        global_settings = MagicMock()
+        instance_time_settings = MagicMock()
+        tenant_time_settings = MagicMock()
+
+        instance_settings = {inst_dec.id: instance_time_settings}
+
+        tenant_settings = {'proj': tenant_time_settings}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                tenant_settings}
+
+        rackspace_automation.get_verdict(inst_dec, configuration, 'proj')
+
+        instance_time_settings.should_shelve.assert_any_call(inst_dec)
+        tenant_time_settings.should_shelve.assert_not_called()
+        global_settings.should_shelve.assert_not_called()
+
+    def test_get_verdict_tenant_configuration_swap(self):
+        inst_dec = MagicMock()
+        inst_dec.id = 'inst1'
+
+        global_settings = MagicMock()
+        tenant_time_settings = MagicMock()
+
+        tenant_settings = {'proj': tenant_time_settings}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                {},
+            rackspace_automation.TENANT_SETTINGS:
+                tenant_settings}
+
+        rackspace_automation.get_verdict(inst_dec, configuration, 'proj')
+
+        tenant_time_settings.should_shelve.assert_any_call(inst_dec)
+        global_settings.should_shelve.assert_not_called()
+
+    def test_get_verdict_instance_configuration_swap(self):
+        inst_dec = MagicMock()
+        inst_dec.id = 'inst1'
+
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
+
         instance_settings = {inst_dec.id: instance_time_settings}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
-        instance_time_settings.should_shelve = MagicMock(return_value=True)
+        rackspace_automation.get_verdict(inst_dec, configuration, None)
 
-        rackspace_automation.get_verdict(inst_dec, configuration)
         instance_time_settings.should_shelve.assert_any_call(inst_dec)
+        global_settings.should_shelve.assert_not_called()
 
     def test_get_verdict_shelves(self):
         inst_dec = MagicMock()
@@ -711,15 +999,18 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.SHELVE)
 
-    def test_get_verdict_returns_shelves_warn(self):
+    @mock.patch('rackspace_automation.get_action_message')
+    def test_get_verdict_returns_shelves_warn(self, _):
         inst_dec = MagicMock()
         inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
@@ -729,13 +1020,15 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
             return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.SHELVE_WARN)
 
@@ -749,18 +1042,21 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
             return_value=False)
         instance_time_settings.should_delete = MagicMock(return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.DELETE)
 
-    def test_get_verdict_returns_delete_warn(self):
+    @mock.patch('rackspace_automation.get_action_message')
+    def test_get_verdict_returns_delete_warn(self, _):
         inst_dec = MagicMock()
         inst_dec.id = 'inst1'
         instance_time_settings = MagicMock()
@@ -770,7 +1066,9 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
@@ -779,7 +1077,7 @@ class TestGeneral(unittest.TestCase):
         instance_time_settings.should_delete_warn = MagicMock(
             return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.DELETE_WARN)
 
@@ -793,7 +1091,9 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
@@ -802,7 +1102,7 @@ class TestGeneral(unittest.TestCase):
         instance_time_settings.should_delete_warn = MagicMock(
             return_value=False)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.DO_NOTHING)
 
@@ -814,13 +1114,18 @@ class TestGeneral(unittest.TestCase):
                                      mock_novaclient, mock_inst_dec,
                                      mock_get_verdict):
         project_names = ['p1', 'p2']
-        p1_instance_list = ['i1', 'i2']
-        p2_instance_list = ['i3', 'i4', 'i5']
-        verdicts = {'i1': rackspace_automation.Verdict.SHELVE,
-                    'i2': rackspace_automation.Verdict.SHELVE_WARN,
-                    'i3': rackspace_automation.Verdict.DELETE,
-                    'i4': rackspace_automation.Verdict.DELETE_WARN,
-                    'i5': rackspace_automation.Verdict.DO_NOTHING}
+        i1 = MagicMock()
+        i2 = MagicMock()
+        i3 = MagicMock()
+        i4 = MagicMock()
+        i5 = MagicMock()
+        p1_instance_list = [i1, i2]
+        p2_instance_list = [i3, i4, i5]
+        verdicts = {i1: rackspace_automation.Verdict.SHELVE,
+                    i2: rackspace_automation.Verdict.SHELVE_WARN,
+                    i3: rackspace_automation.Verdict.DELETE,
+                    i4: rackspace_automation.Verdict.DELETE_WARN,
+                    i5: rackspace_automation.Verdict.DO_NOTHING}
 
         def client(session, **kwargs):
             nova_client = MagicMock()
@@ -835,12 +1140,12 @@ class TestGeneral(unittest.TestCase):
         mock_novaclient.Client = MagicMock(side_effect=client)
 
         mock_inst_dec.side_effect = lambda inst, nova: inst
-        mock_get_verdict.side_effect = lambda name, z: verdicts[name]
+        mock_get_verdict.side_effect = lambda name, z, y: verdicts[name]
 
-        expected_res = {'instances_to_shelve': {'p1': ['i1']},
-                        'instances_to_delete': {'p2': ['i3']},
-                        'shelve_warnings': {'p1': ['i2']},
-                        'delete_warnings': {'p2': ['i4']}}
+        expected_res = {'instances_to_shelve': {'p1': [i1]},
+                        'instances_to_delete': {'p2': [i3]},
+                        'shelve_warnings': {'p1': [i2]},
+                        'delete_warnings': {'p2': [i4]}}
         res = rackspace_automation.get_violating_instances(project_names, None)
 
         self.assertDictEqual(expected_res, res)
@@ -855,13 +1160,18 @@ class TestGeneral(unittest.TestCase):
                                                    mock_inst_dec,
                                                    mock_get_verdict):
         project_names = ['p1', 'p2']
-        p1_instance_list = ['i1', 'i2']
-        p2_instance_list = ['i3', 'i4', 'i5']
-        verdicts = {'i1': rackspace_automation.Verdict.DO_NOTHING,
-                    'i2': rackspace_automation.Verdict.DO_NOTHING,
-                    'i3': rackspace_automation.Verdict.DO_NOTHING,
-                    'i4': rackspace_automation.Verdict.DO_NOTHING,
-                    'i5': rackspace_automation.Verdict.DO_NOTHING}
+        i1 = MagicMock()
+        i2 = MagicMock()
+        i3 = MagicMock()
+        i4 = MagicMock()
+        i5 = MagicMock()
+        p1_instance_list = [i1, i2]
+        p2_instance_list = [i3, i4, i5]
+        verdicts = {i1: rackspace_automation.Verdict.DO_NOTHING,
+                    i2: rackspace_automation.Verdict.DO_NOTHING,
+                    i3: rackspace_automation.Verdict.DO_NOTHING,
+                    i4: rackspace_automation.Verdict.DO_NOTHING,
+                    i5: rackspace_automation.Verdict.DO_NOTHING}
 
         def client(session, **kwargs):
             nova_client = MagicMock()
@@ -876,7 +1186,7 @@ class TestGeneral(unittest.TestCase):
         mock_novaclient.Client = MagicMock(side_effect=client)
 
         mock_inst_dec.side_effect = lambda inst, nova: inst
-        mock_get_verdict.side_effect = lambda name, z: verdicts[name]
+        mock_get_verdict.side_effect = lambda name, z, y: verdicts[name]
 
         expected_res = {'instances_to_shelve': {},
                         'instances_to_delete': {},
@@ -932,136 +1242,181 @@ class TestGeneral(unittest.TestCase):
     def test_get_spreadsheet_creds(self):
         pass
 
-    @mock.patch('rackspace_automation.get_ses_client')
-    def test_send_email(self, mock_get_ses):
-        mock_ses = MagicMock()
-        mock_get_ses.return_value = mock_ses
-        mock_ses.send_email = MagicMock()
-
-        rackspace_automation.SOURCE_EMAIL_ADDRESS = 'source_email'
-        items_dict = {'tenant1': ['i1']}
-        configuration = {rackspace_automation.EMAIL_ADDRESSES:
-                             {'tenant1': 'destination'}}
-        rackspace_automation.send_email(configuration, items_dict, 'subject',
-                                        'message')
-
-        mock_ses.send_email.assert_called_with(
-            Source='source_email',
-            Destination={'ToAddresses': ['destination']},
-            Message={
-                'Subject': {
-                    'Data': 'subject'},
-                'Body': {
-                    'Html': {
-                        'Data': 'message'}}
-            })
-
-    @mock.patch('rackspace_automation.send_email')
-    def test_send_warnings(self, mock_send_email):
-        configuration = 'conf'
-        shelve_warnings = 'shelve_warnings'
-        delete_warnings = 'delete_warnings'
-        rackspace_automation.send_warnings(configuration, shelve_warnings,
-                                           delete_warnings)
-
-        mock_send_email.assert_any_call(
-            configuration, shelve_warnings,
-            rackspace_automation.SHELVE_WARNING_SUBJ,
-            rackspace_automation.SHELVE_WARNING_MSG)
-
-        mock_send_email.assert_any_call(
-            configuration, delete_warnings,
-            rackspace_automation.DELETE_WARNING_SUBJ,
-            rackspace_automation.DELETE_WARNING_MSG)
-
-    @mock.patch('rackspace_automation.send_email')
-    def test_delete_instances(self, mock_send_email):
-        configuration = 'conf'
-        inst1 = MagicMock()
-        inst2 = MagicMock()
-        inst1.delete = MagicMock()
-        inst2.delete = MagicMock()
-        instances_to_delete = {
-            'tenant1': [inst1, inst2]
-        }
-
-        rackspace_automation.delete_instances(configuration,
-                                              instances_to_delete)
-
-        inst1.delete.assert_called()
-        inst2.delete.assert_called()
-
-        mock_send_email.assert_any_call(
-            configuration, instances_to_delete,
-            rackspace_automation.DELETE_NOTIF_SUBJ,
-            rackspace_automation.DELETE_NOTIF_MSG)
-
-    @mock.patch('rackspace_automation.send_email')
-    def test_shelve_instances(self, mock_send_email):
-        configuration = 'conf'
-        inst1 = MagicMock()
-        inst2 = MagicMock()
-        inst1.shelve = MagicMock()
-        inst2.shelve = MagicMock()
-        instances_to_shelve = {
-            'tenant1': [inst1, inst2]
-        }
-
-        rackspace_automation.shelve_instances(configuration,
-                                              instances_to_shelve)
-
-        inst1.shelve.assert_called()
-        inst2.shelve.assert_called()
-
-        mock_send_email.assert_any_call(
-            configuration, instances_to_shelve,
-            rackspace_automation.SHELVE_NOTIF_SUBJ,
-            rackspace_automation.SHELVE_NOTIF_MSG)
-
     def test_add_missing_tenant_email_addresses(self):
         pass
 
     def test_all_os_vars(self):
         """Tests that all os variables are checked.
         """
-        os_environ_dict = {}
-        magic_mock = MagicMock()
-        magic_mock.mock.dict('os.environ', os_environ_dict)
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SOURCE_EMAIL_ADDRESS'] = 'something'
+        rackspace_automation.SOURCE_EMAIL_ADDRESS = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['CREDENTIALS_FILE_PATH'] = 'something'
+        rackspace_automation.CREDENTIALS_FILE_PATH = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SPREADSHEET_ID'] = 'something'
+        rackspace_automation.SPREADSHEET_ID = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['SETTINGS_WORKSHEET'] = 'something'
+        rackspace_automation.SETTINGS_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['EMAIL_ADDRESSES_WORKSHEET'] = 'something'
+        rackspace_automation.EMAIL_ADDRESSES_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['INSTANCE_SETTINGS_WORKSHEET'] = 'something'
+        rackspace_automation.INSTANCE_SETTINGS_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_MAIN_PROJECT'] = 'something'
+        rackspace_automation.TENANT_SETTINGS_WORKSHEET = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_URL'] = 'something'
+        rackspace_automation.OPENSTACK_MAIN_PROJECT = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_USERNAME'] = 'something'
+        rackspace_automation.OPENSTACK_URL = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['OPENSTACK_PASSWORD'] = 'something'
+        rackspace_automation.OPENSTACK_USERNAME = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
-        os_environ_dict['DEFAULT_NOTIFICATION_EMAIL_ADDRESS'] = 'something'
+        rackspace_automation.OPENSTACK_PASSWORD = 'something'
         self.assertRaises(glb_exc_class,
                           rackspace_automation.check_os_environ_vars)
+        rackspace_automation.DEFAULT_NOTIFICATION_EMAIL_ADDRESS = 'something'
+        rackspace_automation.check_os_environ_vars()
 
-    def test_main(self):
-        pass
+    def test_get_action_message_shelve_running(self):
+        inst_dec = MagicMock(is_running=True, is_stopped=False)
+        inst_dec.get_status = MagicMock(return_value='running')
+        verdict = rackspace_automation.Verdict.SHELVE
+        threshold_settings = MagicMock()
+        threshold_settings.get_shelve_running_days = MagicMock(return_value=7)
+
+        expected_res = rackspace_automation.h_formats.action_msg_fmt.format(
+            'running', 7)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    def test_get_action_message_shelve_stopped(self):
+        inst_dec = MagicMock(is_running=False, is_stopped=True)
+        inst_dec.get_status = MagicMock(return_value='stopped')
+        verdict = rackspace_automation.Verdict.SHELVE
+        threshold_settings = MagicMock()
+        threshold_settings.get_shelve_stopped_days = MagicMock(return_value=7)
+
+        expected_res = rackspace_automation.h_formats.action_msg_fmt.format(
+            'stopped', 7)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_action_message_shelve_warn_running(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+
+        inst_dec = MagicMock(is_running=True, is_stopped=False)
+        inst_dec.get_status = MagicMock(return_value='running')
+        inst_dec.running_since = MagicMock(
+            return_value=dt.datetime(1990, 1, 1).isoformat())
+
+        verdict = rackspace_automation.Verdict.SHELVE_WARN
+        threshold_settings = MagicMock()
+        threshold_settings.shelve_running_threshold = 5 * 24 * 60 * 60
+        threshold_settings.get_shelve_running_days = MagicMock(
+            return_value=5)
+
+        expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
+            '3', 'running', 5)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_action_message_shelve_warn_stopped(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+
+        inst_dec = MagicMock(is_running=False, is_stopped=True)
+        inst_dec.get_status = MagicMock(return_value='stopped')
+        inst_dec.stopped_since = MagicMock(
+            return_value=dt.datetime(1990, 1, 1).isoformat())
+
+        verdict = rackspace_automation.Verdict.SHELVE_WARN
+        threshold_settings = MagicMock()
+        threshold_settings.shelve_stopped_threshold = 5 * 24 * 60 * 60
+        threshold_settings.get_shelve_stopped_days = MagicMock(
+            return_value=5)
+
+        expected_res = rackspace_automation.h_formats.shlv_wrn_msg_fmt.format(
+            '3', 'stopped', 5)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    def test_get_action_message_delete(self):
+        inst_dec = MagicMock()
+        inst_dec.get_status = MagicMock(return_value='shelved')
+        verdict = rackspace_automation.Verdict.DELETE
+        threshold_settings = MagicMock()
+        threshold_settings.get_delete_shelved_days = MagicMock(return_value=7)
+
+        expected_res = rackspace_automation.h_formats.action_msg_fmt.format(
+            'shelved', 7)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_action_message_delete_warn(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+
+        inst_dec = MagicMock()
+        inst_dec.get_status = MagicMock(return_value='shelved')
+        inst_dec.shelved_since = MagicMock(
+            return_value=dt.datetime(1990, 1, 1).isoformat())
+
+        verdict = rackspace_automation.Verdict.DELETE_WARN
+        threshold_settings = MagicMock()
+        threshold_settings.delete_shelved_threshold = 5 * 24 * 60 * 60
+        threshold_settings.get_delete_warning_days = MagicMock(
+            return_value=5)
+
+        expected_res = rackspace_automation.h_formats.del_wrn_msg_fmt.format(
+            '3', 'shelved', 5)
+        self.assertEqual(
+            rackspace_automation.get_action_message(inst_dec, verdict,
+                                                    threshold_settings),
+            expected_res)
+
+    def test_get_action_message_empty(self):
+        verdict = rackspace_automation.Verdict.DO_NOTHING
+
+        self.assertEqual(rackspace_automation.get_action_message(
+            MagicMock(), verdict, MagicMock()), '')
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_days_remaining(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+        some_date = dt.datetime(1990, 1, 1).isoformat()
+        threshold = 5 * 24 * 60 * 60
+
+        self.assertEqual(
+            rackspace_automation.get_days_remaining(some_date, threshold), '3')
+
+    @mock.patch('rackspace_automation.get_utc_now')
+    def test_get_days_remaining_infinity(self, mock_utc_now):
+        mock_utc_now.return_value = dt.datetime(1990, 1, 3)
+        some_date = dt.datetime(1990, 1, 1).isoformat()
+        threshold = float('inf')
+
+        self.assertEqual(
+            rackspace_automation.get_days_remaining(some_date, threshold),
+            'inf')
+
+# TODO: add notification email send tests

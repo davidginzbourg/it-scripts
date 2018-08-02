@@ -11,6 +11,8 @@ from novaclient import client as novaclient
 from keystoneclient.v3 import client as keystoneclient
 from oauth2client.service_account import ServiceAccountCredentials
 
+import html_formats as h_formats
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -23,6 +25,7 @@ DRY_RUN = True
 INSTANCE_SETTINGS = 'instance_settings'
 GLOBAL_SETTINGS = 'settings'
 EMAIL_ADDRESSES = 'email_addresses'
+TENANT_SETTINGS = 'tenant_settings'
 PROJECT_NAME = 'project_name'
 INSTANCE_ID = 'instance_id'
 SHELVE_RUNNING_WARNING_THRESHOLD = 'shelve_running_warning_threshold'
@@ -41,6 +44,7 @@ SPREADSHEET_ID = os.environ.get('SPREADSHEET_ID')
 SETTINGS_WORKSHEET = os.environ.get('SETTINGS_WORKSHEET')
 EMAIL_ADDRESSES_WORKSHEET = os.environ.get('EMAIL_ADDRESSES_WORKSHEET')
 INSTANCE_SETTINGS_WORKSHEET = os.environ.get('INSTANCE_SETTINGS_WORKSHEET')
+TENANT_SETTINGS_WORKSHEET = os.environ.get('TENANT_SETTINGS_WORKSHEET')
 OPENSTACK_MAIN_PROJECT = os.environ.get('OPENSTACK_MAIN_PROJECT')
 OPENSTACK_URL = os.environ.get('OPENSTACK_URL')
 OPENSTACK_USERNAME = os.environ.get('OPENSTACK_USERNAME')
@@ -48,18 +52,24 @@ OPENSTACK_PASSWORD = os.environ.get('OPENSTACK_PASSWORD')
 DEFAULT_NOTIFICATION_EMAIL_ADDRESS = \
     os.environ.get('DEFAULT_NOTIFICATION_EMAIL_ADDRESS')
 
-SHELVE_WARNING_SUBJ = 'Rackspace SHELVE warning (test phase)'
+EMAIL_SUBJECT_FORMAT = "(test) RackSpace action and warning notifications " \
+                       "for the {} tenant"
+GLOBAL_EMAIL_SUBJECT = "(test) RackSpace action and warning notifications"
+
 SHELVE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
-                     'shelved soon: {1}'
-DELETE_WARNING_SUBJ = 'Rackspace DELETE warning (test phase)'
+                     'shelved soon:'
+GLOBAL_SHELVE_WARNING_MSG = 'The following instances will be shelved soon:'
+
 DELETE_WARNING_MSG = 'The following instances in the {0} tenant will be ' \
-                     'deleted soon: {1}'
-DELETE_NOTIF_SUBJ = 'Rackspace DELETE notification (test phase)'
-DELETE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
-                   'deleted: {1}'
-SHELVE_NOTIF_SUBJ = 'Rackspace SHELVE notification (test phase)'
-SHELVE_NOTIF_MSG = 'The following instances in the {0} tenant has been ' \
-                   'shelved: {1}'
+                     'deleted soon:'
+GLOBAL_DELETE_WARNING_MSG = 'The following instances will be deleted soon:'
+
+DELETE_NOTIF_MSG = 'The following instances in the {0} tenant were deleted:'
+GLOBAL_DELETE_NOTIF_MSG = 'The following instances were deleted:'
+
+SHELVE_NOTIF_MSG = 'The following instances in the {0} tenant were ' \
+                   'shelved:'
+GLOBAL_SHELVE_NOTIF_MSG = 'The following instances were shelved:'
 
 
 class RackspaceAutomationException(Exception):
@@ -108,7 +118,8 @@ class TimeThresholdSettings:
         :param delete_shelved_threshold: shelved time threshold (seconds).
         """
         if shelve_running_warning_threshold > shelve_running_threshold \
-                or shelve_stopped_warning_threshold > shelve_stopped_threshold \
+                or shelve_stopped_warning_threshold > \
+                        shelve_stopped_threshold \
                 or delete_warning_threshold > delete_shelved_threshold:
             raise RackspaceAutomationException("One or more warning "
                                                "thresholds is greater than "
@@ -197,6 +208,42 @@ class TimeThresholdSettings:
                and self.delete_shelved_threshold == \
                    other.delete_shelved_threshold
 
+    def get_shelve_running_warning_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_running_warning_threshold / 86400)
+
+    def get_shelve_stopped_warning_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_stopped_warning_threshold / 86400)
+
+    def get_delete_warning_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.delete_warning_threshold / 86400)
+
+    def get_shelve_running_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_running_threshold / 86400)
+
+    def get_shelve_stopped_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.shelve_stopped_threshold / 86400)
+
+    def get_delete_shelved_days(self):
+        """
+        :return: a 1.f days format of the threshold.
+        """
+        return '%.1f' % float(self.delete_shelved_threshold / 86400)
+
 
 class InstanceDecorator:
     """A decorator for the novaclient instances.
@@ -221,6 +268,9 @@ class InstanceDecorator:
                                   key=lambda x: x.start_time,
                                   reverse=True)
 
+        self.last_action_result = None
+        self.action_message = None
+
     @property
     def id(self):
         return self.instance.id
@@ -234,7 +284,7 @@ class InstanceDecorator:
         return getattr(self.instance, 'OS-EXT-STS:vm_state')
 
     def running_since(self):
-        if not self.actions_log or self.status not in self.active_vm_states:
+        if not self.actions_log or not self.is_running:
             return None
         for action in self.actions_log:
             trans = get_transition(action.action)
@@ -246,7 +296,7 @@ class InstanceDecorator:
         return str(datetime.datetime.max)
 
     def stopped_since(self):
-        if not self.actions_log or self.status not in self.stopped_vm_states:
+        if not self.actions_log or not self.is_stopped:
             return None
         for action in self.actions_log:
             trans = get_transition(action.action)
@@ -258,7 +308,7 @@ class InstanceDecorator:
         return str(datetime.datetime.max)
 
     def shelved_since(self):
-        if not self.actions_log or self.status not in self.shelved_vm_states:
+        if not self.actions_log or not self.is_shelved:
             return None
         for action in self.actions_log:
             trans = get_transition(action.action)
@@ -280,20 +330,64 @@ class InstanceDecorator:
 
         :return: whether it was successful or not.
         """
+        self.last_action_result = True
         if not DRY_RUN:
             response = self.instance.delete()
-            return response and response[0] == self._delete_succ_code
-        return True
+            self.last_action_result = response \
+                                      and response[0] == self._delete_succ_code
+        return self.last_action_result
 
     def shelve(self):
         """Shelves the instance.
 
         :return: whether it was successful or not.
         """
+        self.last_action_result = True
         if not DRY_RUN:
             response = self.instance.shelve()
-            return response and response[0] == self._shelve_succ_code
-        return True
+            self.last_action_result = response \
+                                      and response[0] == self._shelve_succ_code
+        return self.last_action_result
+
+    def get_last_action_result(self):
+        return self.last_action_result
+
+    def add_action_message(self, message):
+        """Adds a reason to display for the action to be taken.
+
+        :param message: message to display for the action to be taken.
+        """
+        self.action_message = message
+
+    def get_action_message(self):
+        """
+        :return: action message (i.e. the Note/Reason action message).
+        """
+        return self.action_message
+
+    def get_status(self):
+        """
+        :return: a user friendly instance status.
+        """
+        if self.is_running:
+            return 'running'
+        if self.is_stopped:
+            return 'stopped'
+        if self.is_shelved:
+            return 'shelved'
+        return 'unknown'
+
+    @property
+    def is_running(self):
+        return self.status in self.active_vm_states
+
+    @property
+    def is_stopped(self):
+        return self.status in self.stopped_vm_states
+
+    @property
+    def is_shelved(self):
+        return self.status in self.shelved_vm_states
 
 
 def get_transition(action_str):
@@ -305,10 +399,12 @@ def get_transition(action_str):
     :return: a transition.
     :rtype: StateTransition
     """
-    to_running = {'create', 'rebuild', 'resume', 'os-start', 'unpause',
-                  'unshelve'}
+    to_running = {'create', 'rebuild', 'resume', 'restore', 'start',
+                  'unpause', 'unshelve', 'unrescue', 'set admin password',
+                  'backup', 'snapshot', 'reboot', 'revert resize',
+                  'confirm resize'}
     to_shelved = {'shelve', 'shelveOffload'}
-    to_stopped = {'pause', 'os-stop', 'suspend'}
+    to_stopped = {'stop', 'snapshot', 'backup'}
     if action_str in to_running:
         return StateTransition.TO_RUNNING
     if action_str in to_shelved:
@@ -318,28 +414,103 @@ def get_transition(action_str):
     return StateTransition.NO_CHANGE
 
 
-def get_verdict(inst_dec, configuration):
+def get_days_remaining(in_cur_state_since, threshold):
+    """Calculates the days remaining until the threshold is breached.
+
+    :param in_cur_state_since: date in iso format.
+    :param threshold: threshold (seconds).
+    :return: how many days remaining until the threshold is breached.
     """
+    if threshold == float('inf'):
+        return 'inf'
+    in_cur_state_since_parsed = dateutil.parser.parse(
+        in_cur_state_since).replace(tzinfo=None)
+    days_delta = in_cur_state_since_parsed + datetime.timedelta(
+        seconds=threshold) - get_utc_now()
+    return str(days_delta.days)
+
+
+def get_action_message(inst_dec, verdict, threshold_settings):
+    """
+    :param inst_dec: instance decorator.
+    :param verdict: action verdict
+    :param threshold_settings: threshold settings of the instance.
+    :return: the message to display for the given verdict.
+    """
+    message = ''
+    days = '?'
+    days_remaining = '?'
+    if verdict == Verdict.SHELVE:
+        if inst_dec.is_running:
+            days = threshold_settings.get_shelve_running_days()
+        elif inst_dec.is_stopped:
+            days = threshold_settings.get_shelve_stopped_days()
+        message = h_formats.action_msg_fmt.format(
+            inst_dec.get_status(), days)
+
+    elif verdict == Verdict.SHELVE_WARN:
+        if inst_dec.is_running:
+            days_remaining = get_days_remaining(
+                inst_dec.running_since(),
+                threshold_settings.shelve_running_threshold)
+            days = threshold_settings.get_shelve_running_days()
+        elif inst_dec.is_stopped:
+            days_remaining = get_days_remaining(
+                inst_dec.stopped_since(),
+                threshold_settings.shelve_stopped_threshold)
+            days = threshold_settings.get_shelve_stopped_days()
+        message = h_formats.shlv_wrn_msg_fmt.format(
+            days_remaining, inst_dec.get_status(), days)
+
+    elif verdict == Verdict.DELETE:
+        days = threshold_settings.get_delete_shelved_days()
+        message = h_formats.action_msg_fmt.format(
+            inst_dec.get_status(), days)
+
+    elif verdict == Verdict.DELETE_WARN:
+        days_remaining = get_days_remaining(
+            inst_dec.shelved_since(),
+            threshold_settings.delete_shelved_threshold)
+        days = threshold_settings.get_delete_warning_days()
+        message = h_formats.del_wrn_msg_fmt.format(
+            days_remaining, inst_dec.get_status(), days)
+
+    return message
+
+
+def get_verdict(inst_dec, configuration, project_name):
+    """Calculates which state to assign instance and a message to display
+    regarding the action. Note that the configuration of an instance has a
+    higher priority over a tenant settings.
+
     :param inst_dec: instance decorator.
     :type: InstanceDecorator.
     :param configuration: program configuration.
-    :return: which state to assign instance.
+    :param project_name: project name that the instance resides in.
+    :return: which state to assign instance and a message to display regarding
+    the action.
     """
     threshold_settings = configuration[GLOBAL_SETTINGS]  # Default
+
+    if project_name in configuration[TENANT_SETTINGS]:
+        threshold_settings = configuration[TENANT_SETTINGS][project_name]
 
     if inst_dec.id in configuration[INSTANCE_SETTINGS]:
         threshold_settings = \
             configuration[INSTANCE_SETTINGS][inst_dec.id]
 
+    verdict = Verdict.DO_NOTHING
     if threshold_settings.should_shelve(inst_dec):
-        return Verdict.SHELVE
-    if threshold_settings.should_shelve_warn(inst_dec):
-        return Verdict.SHELVE_WARN
-    if threshold_settings.should_delete(inst_dec):
-        return Verdict.DELETE
-    if threshold_settings.should_delete_warn(inst_dec):
-        return Verdict.DELETE_WARN
-    return Verdict.DO_NOTHING
+        verdict = Verdict.SHELVE
+    elif threshold_settings.should_shelve_warn(inst_dec):
+        verdict = Verdict.SHELVE_WARN
+    elif threshold_settings.should_delete(inst_dec):
+        verdict = Verdict.DELETE
+    elif threshold_settings.should_delete_warn(inst_dec):
+        verdict = Verdict.DELETE_WARN
+    message = get_action_message(inst_dec, verdict, threshold_settings)
+    inst_dec.add_action_message(message)
+    return verdict
 
 
 def get_violating_instances(project_names, configuration):
@@ -391,7 +562,7 @@ def get_violating_instances(project_names, configuration):
 
         for instance in instances_list:
             inst_dec = InstanceDecorator(instance, nova)
-            verdict = get_verdict(inst_dec, configuration)
+            verdict = get_verdict(inst_dec, configuration, project)
             if verdict != Verdict.DO_NOTHING:
                 add_instance_to_dicts(project, inst_dec, verdict)
 
@@ -426,6 +597,10 @@ def fetch_configuration(spreadsheet_creds):
         {
             '(ID of) instance_j': TimeThresholdSettings
         }
+    'tenant_settings':
+        {
+            'project_j': TimeThresholdSettings
+        }
     'settings': TimeThresholdSettings,
     'email_addresses': { 'tenant_name': 'email_address', ... }
     }
@@ -435,7 +610,26 @@ def fetch_configuration(spreadsheet_creds):
     """
     return {INSTANCE_SETTINGS: fetch_instance_settings(spreadsheet_creds),
             GLOBAL_SETTINGS: fetch_global_settings(spreadsheet_creds),
-            EMAIL_ADDRESSES: fetch_email_addresses(spreadsheet_creds)}
+            EMAIL_ADDRESSES: fetch_email_addresses(spreadsheet_creds),
+            TENANT_SETTINGS: fetch_tenant_settings(spreadsheet_creds)}
+
+
+def fetch_tenant_settings(spreadsheet_creds):
+    """
+    :param spreadsheet_creds: GSpread credentials.
+    :return: the tenant settings dict.
+    """
+    tenant_settings = {}
+    contents = get_worksheet_contents(spreadsheet_creds,
+                                      TENANT_SETTINGS_WORKSHEET)
+    if not contents:
+        return {}
+    for row_dict in contents:
+        validate_has_min_vals(row_dict)
+        project_name = row_dict[PROJECT_NAME]
+        tenant_settings[project_name] = TimeThresholdSettings(
+            **get_time_threshold_settings_params(row_dict))
+    return tenant_settings
 
 
 def get_worksheet_contents(spreadsheet_creds, worksheet_name):
@@ -450,6 +644,47 @@ def get_worksheet_contents(spreadsheet_creds, worksheet_name):
     return sheet.get_all_records()
 
 
+def parse_value(value):
+    """Parses value from string to float
+    :param value: value to parse.
+    :return: parsed value.
+    """
+    if not value:
+        return float('inf')
+    v = float(value)
+    if v < 0:
+        raise RackspaceAutomationException('Threshold cannot be negative.')
+    return v
+
+
+def get_time_threshold_settings_params(row_dict):
+    """
+    :param row_dict: dictionary representing the row.
+    :return: the parsed settings values.
+    """
+    shelve_running_warning_threshold = \
+        parse_value(row_dict[SHELVE_RUNNING_WARNING_THRESHOLD])
+    shelve_stopped_warning_threshold = \
+        parse_value(row_dict[SHELVE_STOPPED_WARNING_THRESHOLD])
+    delete_warning_threshold = \
+        parse_value(row_dict[DELETE_WARNING_THRESHOLD])
+    shelve_running_threshold = \
+        parse_value(row_dict[SHELVE_RUNNING_THRESHOLD])
+    shelve_stopped_threshold = \
+        parse_value(row_dict[SHELVE_STOPPED_THRESHOLD])
+    delete_shelved_threshold = \
+        parse_value(row_dict[DELETE_SHELVED_THRESHOLD])
+    return {
+        'shelve_running_warning_threshold':
+            shelve_running_warning_threshold,
+        'shelve_stopped_warning_threshold':
+            shelve_stopped_warning_threshold,
+        'delete_warning_threshold': delete_warning_threshold,
+        'shelve_running_threshold': shelve_running_threshold,
+        'shelve_stopped_threshold': shelve_stopped_threshold,
+        'delete_shelved_threshold': delete_shelved_threshold}
+
+
 def fetch_instance_settings(spreadsheet_creds):
     """Returns the instance settings.
 
@@ -459,44 +694,13 @@ def fetch_instance_settings(spreadsheet_creds):
         '(ID of) instance_j': TimeThresholdSettings
     }
     """
-
-    def parse_value(value):
-        if not value:
-            return float('inf')
-        v = float(value)
-        if v < 0:
-            raise RackspaceAutomationException('Treshold cannot be negative.')
-        return v
-
-    def get_time_threshold_settings_params(row_dict):
-        shelve_running_warning_threshold = \
-            parse_value(row_dict[SHELVE_RUNNING_WARNING_THRESHOLD])
-        shelve_stopped_warning_threshold = \
-            parse_value(row_dict[SHELVE_STOPPED_WARNING_THRESHOLD])
-        delete_warning_threshold = \
-            parse_value(row_dict[DELETE_WARNING_THRESHOLD])
-        shelve_running_threshold = \
-            parse_value(row_dict[SHELVE_RUNNING_THRESHOLD])
-        shelve_stopped_threshold = \
-            parse_value(row_dict[SHELVE_STOPPED_THRESHOLD])
-        delete_shelved_threshold = \
-            parse_value(row_dict[DELETE_SHELVED_THRESHOLD])
-        return {
-            'shelve_running_warning_threshold':
-                shelve_running_warning_threshold,
-            'shelve_stopped_warning_threshold':
-                shelve_stopped_warning_threshold,
-            'delete_warning_threshold': delete_warning_threshold,
-            'shelve_running_threshold': shelve_running_threshold,
-            'shelve_stopped_threshold': shelve_stopped_threshold,
-            'delete_shelved_threshold': delete_shelved_threshold}
-
     instance_settings = {}
     contents = get_worksheet_contents(spreadsheet_creds,
                                       INSTANCE_SETTINGS_WORKSHEET)
     if not contents:
         return {}
     for row_dict in contents:
+        validate_has_min_vals(row_dict)
         instance_id = row_dict[INSTANCE_ID]
         if instance_id:
             instance_settings[instance_id] = \
@@ -506,6 +710,21 @@ def fetch_instance_settings(spreadsheet_creds):
     return instance_settings
 
 
+def validate_has_min_vals(row):
+    """Validates that the row has all the basic required keys.
+
+    Raises RackspaceAutomationException when row is in an invalid format.
+    :param row: row in the spreadsheet.
+    """
+    if 'shelve_running_warning_threshold' not in row \
+            or 'shelve_stopped_warning_threshold' not in row \
+            or 'delete_warning_threshold' not in row \
+            or 'shelve_running_threshold' not in row \
+            or 'shelve_stopped_threshold' not in row \
+            or 'delete_shelved_threshold' not in row:
+        raise RackspaceAutomationException("Invalid threshold settings.")
+
+
 def fetch_global_settings(spreadsheet_creds):
     """Returns the global settings from the Spreadsheet.
 
@@ -513,21 +732,12 @@ def fetch_global_settings(spreadsheet_creds):
     :return: global settings of the program.
     :rtype: TimeThresholdSettings
     """
-
-    def validate_row(row):
-        if 'shelve_running_warning_threshold' not in row \
-                or 'shelve_stopped_warning_threshold' not in row \
-                or 'delete_warning_threshold' not in row \
-                or 'shelve_running_threshold' not in row \
-                or 'shelve_stopped_threshold' not in row \
-                or 'delete_shelved_threshold' not in row:
-            raise RackspaceAutomationException("Invalid global threshold "
-                                               "settings.")
-
     contents = get_worksheet_contents(spreadsheet_creds, SETTINGS_WORKSHEET)
     if not contents:
         raise RackspaceAutomationException("Settings worksheet is empty.")
-    validate_row(contents[0])
+    validate_has_min_vals(contents[0])
+    for key in contents[0].keys():
+        contents[0][key] = parse_value(contents[0][key])
     return TimeThresholdSettings(**contents[0])
 
 
@@ -590,47 +800,26 @@ def get_ses_client():
     return ses_client
 
 
-def send_email(configuration, items_dict, subject, message_format):
-    """Sends out an email with the given subjct and message format.
+def send_email(subject, message, to_addresses):
+    """Sends out an email with the given subject and message.
 
-    :param configuration:  program configuration.
-    :param items_dict: dict to iterate through its items (tenants to instances
-        list).
     :param subject: email subject.
-    :param message_format: email message format.
+    :param message: email message.
+    :param to_addresses: addresses to send to.
     """
-    for tenant, instances in items_dict.items():
-        destination = {'ToAddresses': [configuration[EMAIL_ADDRESSES][tenant]]}
-        message = message_format.format(tenant, instances)
-        message_id = get_ses_client().send_email(Source=SOURCE_EMAIL_ADDRESS,
-                                                 Destination=destination,
-                                                 Message={
-                                                     'Subject': {
-                                                         'Data': subject},
-                                                     'Body': {
-                                                         'Html': {
-                                                             'Data': message}}
-                                                 })['MessageId']
-        logger.info('Sent a message to {0} with ID {1}.'.format(destination,
-                                                                message_id))
 
-
-def send_warnings(configuration, shelve_warnings, delete_warnings):
-    """Sends out a warning regarding the given instances.
-
-    :param configuration: program configuration.
-    :param shelve_warnings: instances that their owners should be warned before
-     shelving.
-    :param delete_warnings: instances that their owners should be warned before
-     deletion.
-    """
-    subject = SHELVE_WARNING_SUBJ
-    message = SHELVE_WARNING_MSG
-    send_email(configuration, shelve_warnings, subject, message)
-
-    subject = DELETE_WARNING_SUBJ
-    message = DELETE_WARNING_MSG
-    send_email(configuration, delete_warnings, subject, message)
+    destination = {'ToAddresses': to_addresses}
+    message_id = get_ses_client().send_email(Source=SOURCE_EMAIL_ADDRESS,
+                                             Destination=destination,
+                                             Message={
+                                                 'Subject': {
+                                                     'Data': subject},
+                                                 'Body': {
+                                                     'Html': {
+                                                         'Data': message}}
+                                             })['MessageId']
+    logger.info('Sent a message to {0} with ID {1}.'.format(destination,
+                                                            message_id))
 
 
 def delete_instances(configuration, instances_to_delete):
@@ -646,9 +835,6 @@ def delete_instances(configuration, instances_to_delete):
                     'Could not delete instance with name: {0} and '
                     'id: {1} at tenant {2}'.format(
                         inst_dec.name, inst_dec.id, tenant))
-    subject = DELETE_NOTIF_SUBJ
-    message = DELETE_NOTIF_MSG
-    send_email(configuration, instances_to_delete, subject, message)
 
 
 def shelve_instances(configuration, instances_to_shelve):
@@ -664,10 +850,6 @@ def shelve_instances(configuration, instances_to_shelve):
                     'Could not shelve instance with name: {0} and '
                     'id: {1} at tenant {2}'.format(
                         inst_dec.name, inst_dec.id, tenant))
-
-    subject = SHELVE_NOTIF_SUBJ
-    message = SHELVE_NOTIF_MSG
-    send_email(configuration, instances_to_shelve, subject, message)
 
 
 def add_missing_tenant_email_addresses(project_names, configuration,
@@ -728,6 +910,114 @@ def check_os_environ_vars():
             'Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
 
+def perform_actions(violating_instances, configuration):
+    """Performs actions.
+
+    :param violating_instances: a dict of lists of rule violating instances.
+    :param configuration: program configuration.
+    """
+    shelve_instances(configuration=configuration,
+                     instances_to_shelve=violating_instances[
+                         'instances_to_shelve'])
+    delete_instances(configuration=configuration,
+                     instances_to_delete=violating_instances[
+                         'instances_to_delete'])
+
+
+def send_email_notifications(violating_instances, configuration):
+    """Sends out notifications.
+
+    :param violating_instances: a dict of lists of rule violating instances.
+    :param configuration: program configuration.
+    """
+    tenant_messages = {}
+
+    def build_html(instances_key, p_text_format, is_action):
+        for tenant, instances in violating_instances[instances_key].items():
+            if configuration[EMAIL_ADDRESSES][tenant] != \
+                    DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
+                table_row_str_buf = ""
+                for inst_dec in instances:
+                    status = "Succeeded" \
+                        if inst_dec.get_last_action_result() else "Failed"
+                    if is_action:
+                        table_row_str_buf += \
+                            h_formats.action_table_cell_format.format(
+                                inst_dec.name,
+                                status,
+                                inst_dec.get_action_message())
+                    else:
+                        table_row_str_buf += \
+                            h_formats.warning_table_cell_format.format(
+                                inst_dec.name,
+                                inst_dec.get_action_message())
+                paragraph_text = p_text_format.format(tenant)
+                if is_action:
+                    table_str = h_formats.action_table.format(
+                        table_row_str_buf)
+                else:
+                    table_str = h_formats.warning_table.format(
+                        table_row_str_buf)
+
+                tenant_messages[tenant] = h_formats.p.format(
+                    paragraph_text) + table_str
+
+    def build_global_html(instances_key, p_text, is_action):
+        table_row_str_buf = ""
+        is_empty = True
+        for tenant, instances in violating_instances[instances_key].items():
+            is_empty = False
+            for inst_dec in instances:
+                status = "Succeeded" \
+                    if inst_dec.get_last_action_result() else "Failed"
+                if is_action:
+                    table_row_str_buf += \
+                        h_formats.global_action_table_cell_format.format(
+                            tenant,
+                            inst_dec.name,
+                            status,
+                            inst_dec.get_action_message())
+                else:
+                    table_row_str_buf += \
+                        h_formats.global_warning_table_cell_format.format(
+                            tenant,
+                            inst_dec.name,
+                            inst_dec.get_action_message())
+        if is_empty:
+            return ''
+        if is_action:
+            table_str = h_formats.global_action_table.format(
+                table_row_str_buf)
+        else:
+            table_str = h_formats.global_warning_table.format(
+                table_row_str_buf)
+        return h_formats.p.format(p_text) + table_str
+
+    build_html('instances_to_shelve', SHELVE_NOTIF_MSG, True)
+    build_html('instances_to_delete', DELETE_NOTIF_MSG, True)
+    build_html('shelve_warnings', SHELVE_WARNING_MSG, False)
+    build_html('delete_warnings', DELETE_WARNING_MSG, False)
+    global_tenant_message = build_global_html(
+        'instances_to_shelve', GLOBAL_SHELVE_NOTIF_MSG, True)
+    global_tenant_message += build_global_html(
+        'instances_to_delete', GLOBAL_DELETE_NOTIF_MSG, True)
+    global_tenant_message += build_global_html(
+        'shelve_warnings', GLOBAL_SHELVE_WARNING_MSG, False)
+    global_tenant_message += build_global_html(
+        'delete_warnings', GLOBAL_DELETE_WARNING_MSG, False)
+    for tenant_name, msg in tenant_messages.items():
+        if configuration[EMAIL_ADDRESSES][tenant_name] != \
+                DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
+            send_email(
+                EMAIL_SUBJECT_FORMAT.format(tenant_name),
+                h_formats.msg_html.format(msg),
+                [configuration[EMAIL_ADDRESSES][tenant_name]])
+    send_email(
+        GLOBAL_EMAIL_SUBJECT,
+        h_formats.msg_html.format(global_tenant_message),
+        [DEFAULT_NOTIFICATION_EMAIL_ADDRESS])
+
+
 def main(event, context):
     check_os_environ_vars()
     spreadsheet_credentials = get_spreadsheet_creds()
@@ -737,12 +1027,5 @@ def main(event, context):
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    shelve_instances(configuration=configuration,
-                     instances_to_shelve=violating_instances[
-                         'instances_to_shelve'])
-    delete_instances(configuration=configuration,
-                     instances_to_delete=violating_instances[
-                         'instances_to_delete'])
-    send_warnings(configuration=configuration,
-                  shelve_warnings=violating_instances['shelve_warnings'],
-                  delete_warnings=violating_instances['delete_warnings'])
+    perform_actions(violating_instances, configuration)
+    send_email_notifications(violating_instances, configuration)
