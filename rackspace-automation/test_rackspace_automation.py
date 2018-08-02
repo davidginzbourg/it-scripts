@@ -898,29 +898,81 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         global_settings.should_shelve = MagicMock(return_value=True)
 
-        rackspace_automation.get_verdict(inst_dec, configuration)
+        rackspace_automation.get_verdict(inst_dec, configuration, None)
         global_settings.should_shelve.assert_any_call(inst_dec)
 
-    def test_get_verdict_configuration_swap(self):
+    def test_get_verdict_tenant_with_instance_configuration_swap(self):
         inst_dec = MagicMock()
         inst_dec.id = 'inst1'
+
+        global_settings = MagicMock()
+        instance_time_settings = MagicMock()
+        tenant_time_settings = MagicMock()
+
+        instance_settings = {inst_dec.id: instance_time_settings}
+
+        tenant_settings = {'proj': tenant_time_settings}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                tenant_settings}
+
+        rackspace_automation.get_verdict(inst_dec, configuration, 'proj')
+
+        instance_time_settings.should_shelve.assert_any_call(inst_dec)
+        tenant_time_settings.should_shelve.assert_not_called()
+        global_settings.should_shelve.assert_not_called()
+
+    def test_get_verdict_tenant_configuration_swap(self):
+        inst_dec = MagicMock()
+        inst_dec.id = 'inst1'
+
+        global_settings = MagicMock()
+        tenant_time_settings = MagicMock()
+
+        tenant_settings = {'proj': tenant_time_settings}
+        configuration = {
+            rackspace_automation.GLOBAL_SETTINGS:
+                global_settings,
+            rackspace_automation.INSTANCE_SETTINGS:
+                {},
+            rackspace_automation.TENANT_SETTINGS:
+                tenant_settings}
+
+        rackspace_automation.get_verdict(inst_dec, configuration, 'proj')
+
+        tenant_time_settings.should_shelve.assert_any_call(inst_dec)
+        global_settings.should_shelve.assert_not_called()
+
+    def test_get_verdict_instance_configuration_swap(self):
+        inst_dec = MagicMock()
+        inst_dec.id = 'inst1'
+
         instance_time_settings = MagicMock()
         global_settings = MagicMock()
+
         instance_settings = {inst_dec.id: instance_time_settings}
         configuration = {
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
-        instance_time_settings.should_shelve = MagicMock(return_value=True)
+        rackspace_automation.get_verdict(inst_dec, configuration, None)
 
-        rackspace_automation.get_verdict(inst_dec, configuration)
         instance_time_settings.should_shelve.assert_any_call(inst_dec)
+        global_settings.should_shelve.assert_not_called()
 
     def test_get_verdict_shelves(self):
         inst_dec = MagicMock()
@@ -932,11 +984,13 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.SHELVE)
 
@@ -951,13 +1005,15 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
             return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.SHELVE_WARN)
 
@@ -971,14 +1027,16 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
             return_value=False)
         instance_time_settings.should_delete = MagicMock(return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.DELETE)
 
@@ -993,7 +1051,9 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
@@ -1002,7 +1062,7 @@ class TestGeneral(unittest.TestCase):
         instance_time_settings.should_delete_warn = MagicMock(
             return_value=True)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.DELETE_WARN)
 
@@ -1016,7 +1076,9 @@ class TestGeneral(unittest.TestCase):
             rackspace_automation.GLOBAL_SETTINGS:
                 global_settings,
             rackspace_automation.INSTANCE_SETTINGS:
-                instance_settings}
+                instance_settings,
+            rackspace_automation.TENANT_SETTINGS:
+                {}}
 
         instance_time_settings.should_shelve = MagicMock(return_value=False)
         instance_time_settings.should_shelve_warn = MagicMock(
@@ -1025,7 +1087,7 @@ class TestGeneral(unittest.TestCase):
         instance_time_settings.should_delete_warn = MagicMock(
             return_value=False)
 
-        res = rackspace_automation.get_verdict(inst_dec, configuration)
+        res = rackspace_automation.get_verdict(inst_dec, configuration, None)
 
         self.assertEqual(res, rackspace_automation.Verdict.DO_NOTHING)
 
@@ -1063,7 +1125,7 @@ class TestGeneral(unittest.TestCase):
         mock_novaclient.Client = MagicMock(side_effect=client)
 
         mock_inst_dec.side_effect = lambda inst, nova: inst
-        mock_get_verdict.side_effect = lambda name, z: verdicts[name]
+        mock_get_verdict.side_effect = lambda name, z, y: verdicts[name]
 
         expected_res = {'instances_to_shelve': {'p1': [i1]},
                         'instances_to_delete': {'p2': [i3]},
@@ -1109,7 +1171,7 @@ class TestGeneral(unittest.TestCase):
         mock_novaclient.Client = MagicMock(side_effect=client)
 
         mock_inst_dec.side_effect = lambda inst, nova: inst
-        mock_get_verdict.side_effect = lambda name, z: verdicts[name]
+        mock_get_verdict.side_effect = lambda name, z, y: verdicts[name]
 
         expected_res = {'instances_to_shelve': {},
                         'instances_to_delete': {},

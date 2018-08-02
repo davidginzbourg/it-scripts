@@ -475,15 +475,22 @@ def get_action_message(inst_dec, verdict, threshold_settings):
     return message
 
 
-def get_verdict(inst_dec, configuration):
-    """
+def get_verdict(inst_dec, configuration, project_name):
+    """Calculates which state to assign instance and a message to display
+    regarding the action. Note that the configuration of an instance has a
+    higher priority over a tenant settings.
+
     :param inst_dec: instance decorator.
     :type: InstanceDecorator.
     :param configuration: program configuration.
+    :param project_name: project name that the instance resides in.
     :return: which state to assign instance and a message to display regarding
-    the action
+    the action.
     """
     threshold_settings = configuration[GLOBAL_SETTINGS]  # Default
+
+    if project_name in configuration[TENANT_SETTINGS]:
+        threshold_settings = configuration[TENANT_SETTINGS][project_name]
 
     if inst_dec.id in configuration[INSTANCE_SETTINGS]:
         threshold_settings = \
@@ -552,7 +559,7 @@ def get_violating_instances(project_names, configuration):
 
         for instance in instances_list:
             inst_dec = InstanceDecorator(instance, nova)
-            verdict = get_verdict(inst_dec, configuration)
+            verdict = get_verdict(inst_dec, configuration, project)
             if verdict != Verdict.DO_NOTHING:
                 add_instance_to_dicts(project, inst_dec, verdict)
 
@@ -620,6 +627,7 @@ def fetch_tenant_settings(spreadsheet_creds):
         tenant_settings[project_name] = TimeThresholdSettings(
             **get_time_threshold_settings_params(row_dict))
     return tenant_settings
+
 
 def get_worksheet_contents(spreadsheet_creds, worksheet_name):
     """
