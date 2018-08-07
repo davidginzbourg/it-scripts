@@ -1,11 +1,12 @@
-import datetime as dt
 import unittest
+import datetime as dt
 
 import mock
 import numpy as np
 import rackspace_automation
 from mock import MagicMock
 from rackspace_automation import InstanceDecorator, StateTransition
+from novaclient.exceptions import Conflict
 
 SECONDS_TO_DAYS = 86400
 glb_exc_class = rackspace_automation.RackspaceAutomationException
@@ -462,6 +463,33 @@ class TestInstanceDecorator(unittest.TestCase):
         self.assertTrue(res)
         self.assertTrue(inst_dec.get_last_action_result())
 
+    def test_delete_succ_no_resp(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.delete = MagicMock(return_value=())
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.delete()
+        instance.delete.assert_called()
+        self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_delete_fails_on_lock(self):
+        def raise_error():
+            raise Conflict(0, '')
+
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.delete = MagicMock(side_effect=raise_error)
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.delete()
+        instance.delete.assert_called()
+        self.assertFalse(res)
+        self.assertFalse(inst_dec.get_last_action_result())
+
     def test_delete_failed(self):
         rackspace_automation.DRY_RUN = False
         instance = MagicMock()
@@ -497,6 +525,33 @@ class TestInstanceDecorator(unittest.TestCase):
         instance.shelve.assert_called()
         self.assertTrue(res)
         self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_shelve_succ_no_resp(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.shelve = MagicMock(return_value=())
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.shelve()
+        instance.shelve.assert_called()
+        self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_shelve_fails_on_lock(self):
+        def raise_error():
+            raise Conflict(0, '')
+
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.shelve = MagicMock(side_effect=raise_error)
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.shelve()
+        instance.shelve.assert_called()
+        self.assertFalse(res)
+        self.assertFalse(inst_dec.get_last_action_result())
 
     def test_shelve_failed(self):
         rackspace_automation.DRY_RUN = False

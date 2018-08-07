@@ -332,9 +332,17 @@ class InstanceDecorator:
         """
         self.last_action_result = True
         if not DRY_RUN:
-            response = self.instance.delete()
-            self.last_action_result = response \
-                                      and response[0] == self._delete_succ_code
+            error = False
+            response = None
+            try:
+                response = self.instance.delete()
+            except novaclient.exceptions.Conflict:
+                self.last_action_result = False
+                error = True
+            if not error:
+                if response:
+                    self.last_action_result = \
+                        response[0] == self._delete_succ_code
         return self.last_action_result
 
     def shelve(self):
@@ -344,9 +352,17 @@ class InstanceDecorator:
         """
         self.last_action_result = True
         if not DRY_RUN:
-            response = self.instance.shelve()
-            self.last_action_result = response \
-                                      and response[0] == self._shelve_succ_code
+            error = False
+            response = None
+            try:
+                response = self.instance.shelve()
+            except novaclient.exceptions.Conflict:
+                self.last_action_result = False
+                error = True
+            if not error:
+                if response:
+                    self.last_action_result = \
+                        response[0] == self._shelve_succ_code
         return self.last_action_result
 
     def get_last_action_result(self):
@@ -822,10 +838,9 @@ def send_email(subject, message, to_addresses):
                                                             message_id))
 
 
-def delete_instances(configuration, instances_to_delete):
+def delete_instances(instances_to_delete):
     """Delete the shelved instances.
 
-    :param configuration: program configuration.
     :param instances_to_delete: instances to delete.
     """
     for tenant, instances in instances_to_delete.items():
@@ -837,10 +852,9 @@ def delete_instances(configuration, instances_to_delete):
                         inst_dec.name, inst_dec.id, tenant))
 
 
-def shelve_instances(configuration, instances_to_shelve):
+def shelve_instances(instances_to_shelve):
     """Shelve the instances.
 
-    :param configuration: program configuration.
     :param instances_to_shelve: instances to shelve.
     """
     for tenant, instances in instances_to_shelve.items():
@@ -910,18 +924,15 @@ def check_os_environ_vars():
             'Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
 
-def perform_actions(violating_instances, configuration):
+def perform_actions(violating_instances):
     """Performs actions.
 
     :param violating_instances: a dict of lists of rule violating instances.
-    :param configuration: program configuration.
     """
-    shelve_instances(configuration=configuration,
-                     instances_to_shelve=violating_instances[
-                         'instances_to_shelve'])
-    delete_instances(configuration=configuration,
-                     instances_to_delete=violating_instances[
-                         'instances_to_delete'])
+    shelve_instances(instances_to_shelve=violating_instances[
+        'instances_to_shelve'])
+    delete_instances(instances_to_delete=violating_instances[
+        'instances_to_delete'])
 
 
 def send_email_notifications(violating_instances, configuration):
@@ -1027,5 +1038,5 @@ def main(event, context):
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    perform_actions(violating_instances, configuration)
+    perform_actions(violating_instances)
     send_email_notifications(violating_instances, configuration)
