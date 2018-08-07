@@ -332,9 +332,16 @@ class InstanceDecorator:
         """
         self.last_action_result = True
         if not DRY_RUN:
-            response = self.instance.delete()
-            self.last_action_result = response \
-                                      and response[0] == self._delete_succ_code
+            error = False
+            response = None
+            try:
+                response = self.instance.delete()
+            except novaclient.exceptions.Conflict:
+                self.last_action_result = False
+                error = True
+            if not error:
+                self.last_action_result = response and \
+                                          response[0] == self._delete_succ_code
         return self.last_action_result
 
     def shelve(self):
@@ -344,9 +351,16 @@ class InstanceDecorator:
         """
         self.last_action_result = True
         if not DRY_RUN:
-            response = self.instance.shelve()
-            self.last_action_result = response \
-                                      and response[0] == self._shelve_succ_code
+            error = False
+            response = None
+            try:
+                response = self.instance.shelve()
+            except novaclient.exceptions.Conflict:
+                self.last_action_result = False
+                error = True
+            if not error:
+                self.last_action_result = response and \
+                                          response[0] == self._shelve_succ_code
         return self.last_action_result
 
     def get_last_action_result(self):
@@ -914,9 +928,9 @@ def perform_actions(violating_instances):
     :param violating_instances: a dict of lists of rule violating instances.
     """
     shelve_instances(instances_to_shelve=violating_instances[
-                         'instances_to_shelve'])
+        'instances_to_shelve'])
     delete_instances(instances_to_delete=violating_instances[
-                         'instances_to_delete'])
+        'instances_to_delete'])
 
 
 def send_email_notifications(violating_instances, configuration):
