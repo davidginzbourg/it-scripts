@@ -822,10 +822,9 @@ def send_email(subject, message, to_addresses):
                                                             message_id))
 
 
-def delete_instances(configuration, instances_to_delete):
+def delete_instances(instances_to_delete):
     """Delete the shelved instances.
 
-    :param configuration: program configuration.
     :param instances_to_delete: instances to delete.
     """
     for tenant, instances in instances_to_delete.items():
@@ -837,10 +836,9 @@ def delete_instances(configuration, instances_to_delete):
                         inst_dec.name, inst_dec.id, tenant))
 
 
-def shelve_instances(configuration, instances_to_shelve):
+def shelve_instances(instances_to_shelve):
     """Shelve the instances.
 
-    :param configuration: program configuration.
     :param instances_to_shelve: instances to shelve.
     """
     for tenant, instances in instances_to_shelve.items():
@@ -910,17 +908,14 @@ def check_os_environ_vars():
             'Missing DEFAULT_NOTIFICATION_EMAIL_ADDRESS env var')
 
 
-def perform_actions(violating_instances, configuration):
+def perform_actions(violating_instances):
     """Performs actions.
 
     :param violating_instances: a dict of lists of rule violating instances.
-    :param configuration: program configuration.
     """
-    shelve_instances(configuration=configuration,
-                     instances_to_shelve=violating_instances[
+    shelve_instances(instances_to_shelve=violating_instances[
                          'instances_to_shelve'])
-    delete_instances(configuration=configuration,
-                     instances_to_delete=violating_instances[
+    delete_instances(instances_to_delete=violating_instances[
                          'instances_to_delete'])
 
 
@@ -1027,5 +1022,5 @@ def main(event, context):
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    perform_actions(violating_instances, configuration)
+    perform_actions(violating_instances)
     send_email_notifications(violating_instances, configuration)
