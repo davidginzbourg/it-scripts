@@ -404,7 +404,7 @@ def get_transition(action_str):
                   'backup', 'snapshot', 'reboot', 'revert resize',
                   'confirm resize'}
     to_shelved = {'shelve', 'shelveOffload'}
-    to_stopped = {'stop', 'snapshot', 'backup'}
+    to_stopped = {'stop', 'snapshot', 'backup', 'suspend'}
     if action_str in to_running:
         return StateTransition.TO_RUNNING
     if action_str in to_shelved:
