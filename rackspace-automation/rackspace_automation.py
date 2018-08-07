@@ -340,8 +340,9 @@ class InstanceDecorator:
                 self.last_action_result = False
                 error = True
             if not error:
-                self.last_action_result = response and \
-                                          response[0] == self._delete_succ_code
+                if response:
+                    self.last_action_result = \
+                        response[0] == self._delete_succ_code
         return self.last_action_result
 
     def shelve(self):
@@ -359,8 +360,9 @@ class InstanceDecorator:
                 self.last_action_result = False
                 error = True
             if not error:
-                self.last_action_result = response and \
-                                          response[0] == self._shelve_succ_code
+                if response:
+                    self.last_action_result = \
+                        response[0] == self._shelve_succ_code
         return self.last_action_result
 
     def get_last_action_result(self):

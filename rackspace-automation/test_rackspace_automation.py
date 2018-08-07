@@ -463,6 +463,18 @@ class TestInstanceDecorator(unittest.TestCase):
         self.assertTrue(res)
         self.assertTrue(inst_dec.get_last_action_result())
 
+    def test_delete_succ_no_resp(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.delete = MagicMock(return_value=())
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.delete()
+        instance.delete.assert_called()
+        self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
     def test_delete_fails_on_lock(self):
         def raise_error():
             raise Conflict(0, '')
@@ -506,6 +518,18 @@ class TestInstanceDecorator(unittest.TestCase):
         instance = MagicMock()
         instance.shelve = MagicMock(return_value=[
             InstanceDecorator._shelve_succ_code])
+
+        inst_dec = InstanceDecorator(instance, MagicMock())
+
+        res = inst_dec.shelve()
+        instance.shelve.assert_called()
+        self.assertTrue(res)
+        self.assertTrue(inst_dec.get_last_action_result())
+
+    def test_shelve_succ_no_resp(self):
+        rackspace_automation.DRY_RUN = False
+        instance = MagicMock()
+        instance.shelve = MagicMock(return_value=())
 
         inst_dec = InstanceDecorator(instance, MagicMock())
 
