@@ -22,8 +22,9 @@ def main(event, context):
         raise Exception('FROM_ADDRESS os env is missing.')
 
     client = CloudifyClient(manager_url,
-        username=username,
-        password=password)
+                            username=username,
+                            password=password,
+                            tenant='default_tenant')
     deployments = client.deployments.list()
 
     for depl in deployments:
