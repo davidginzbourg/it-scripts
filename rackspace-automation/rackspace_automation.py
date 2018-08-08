@@ -335,7 +335,8 @@ class InstanceDecorator:
             error = False
             response = None
             try:
-                response = self.instance.delete()
+                pass
+                # response = self.instance.delete()
             except novaclient.exceptions.Conflict:
                 self.last_action_result = False
                 error = True
@@ -355,7 +356,8 @@ class InstanceDecorator:
             error = False
             response = None
             try:
-                response = self.instance.shelve()
+                pass
+                # response = self.instance.shelve()
             except novaclient.exceptions.Conflict:
                 self.last_action_result = False
                 error = True
