@@ -42,7 +42,7 @@ def main(event, context):
         created_at = depl['created_at']
         updated_at = depl['updated_at']
         table_cells += h_format.depl_cell.format(
-            ID, customer_name, created_at, updated_at)
+            customer_name, ID, created_at, updated_at)
     table = h_format.depl_table.format(table_cells)
     msg += table
     h_msg = h_format.html_email.format(msg)

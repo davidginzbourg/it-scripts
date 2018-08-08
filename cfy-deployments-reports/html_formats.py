@@ -34,8 +34,8 @@ p = "<p>{}</p><br>"
 depl_table = """
     <table>
     <tr>
-        <th>Deployment ID</th>
         <th>Customer Name</th>
+        <th>Deployment ID</th>
         <th>Created At</th>
         <th>Updated At</th>
     </tr>
