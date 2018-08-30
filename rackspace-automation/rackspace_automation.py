@@ -335,8 +335,7 @@ class InstanceDecorator:
             error = False
             response = None
             try:
-                pass
-                # response = self.instance.delete()
+                response = self.instance.delete()
             except novaclient.exceptions.Conflict:
                 self.last_action_result = False
                 error = True
@@ -356,8 +355,7 @@ class InstanceDecorator:
             error = False
             response = None
             try:
-                pass
-                # response = self.instance.shelve()
+                response = self.instance.shelve()
             except novaclient.exceptions.Conflict:
                 self.last_action_result = False
                 error = True
@@ -1023,11 +1021,11 @@ def send_email_notifications(violating_instances, configuration):
                 DEFAULT_NOTIFICATION_EMAIL_ADDRESS:
             send_email(
                 EMAIL_SUBJECT_FORMAT.format(tenant_name),
-                h_formats.msg_html.format(msg),
+                h_formats.html_email.format(msg),
                 [configuration[EMAIL_ADDRESSES][tenant_name]])
     send_email(
         GLOBAL_EMAIL_SUBJECT,
-        h_formats.msg_html.format(global_tenant_message),
+        h_formats.html_email.format(global_tenant_message),
         [DEFAULT_NOTIFICATION_EMAIL_ADDRESS])
 
 
