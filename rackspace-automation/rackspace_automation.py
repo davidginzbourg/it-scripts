@@ -1038,5 +1038,5 @@ def main(event, context):
     add_missing_tenant_email_addresses(project_names, configuration,
                                        spreadsheet_credentials)
     violating_instances = get_violating_instances(project_names, configuration)
-    # perform_actions(violating_instances)
+    perform_actions(violating_instances)
     send_email_notifications(violating_instances, configuration)
