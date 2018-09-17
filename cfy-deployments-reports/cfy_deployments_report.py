@@ -47,9 +47,10 @@ def main(event, context):
     table_cells = ""
     msg = h_format.p.format("Here are the current active deployments:")
     cnt = 0
+    used_deps = set()
     for instance in instances:
-        if instance['state'] == 'started':
-            deployent_id = instance.deployment_id
+        deployent_id = instance.deployment_id
+        if instance['state'] == 'started' and deployent_id not in used_deps:
             if 'customer_name' in deployments[deployent_id].inputs:
                 customer_name = \
                     deployments[deployent_id].inputs['customer_name']
@@ -60,6 +61,7 @@ def main(event, context):
             table_cells += h_format.depl_cell.format(
                 customer_name, deployent_id, created_at, updated_at)
             cnt += 1
+            used_deps.add(deployent_id)
     total_sum = h_format.depl_cell.format("TOTAL", cnt, "-", "-")
     table_cells = total_sum + table_cells
     table = h_format.depl_table.format(table_cells)
@@ -76,3 +78,5 @@ def main(event, context):
                            'Html': {
                                'Data': h_msg}}
                    })
+    print("Sent the following email:")
+    print(h_msg)
