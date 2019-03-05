@@ -1,7 +1,6 @@
 import re
 import sys
 from datetime import datetime
-from multiprocessing.dummy import Pool as ThreadPool
 
 import csv
 import json
@@ -13,7 +12,7 @@ OUTPUT_PATH = 2
 GEOLITE_CITY_DB_PATH = 3
 CIDR_TO_ORG_DB_PATH = 4
 
-TIME_OUTPUT_FORMAT='%Y-%m-%d %H:%M:%S'
+TIME_OUTPUT_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
 def get_matching_cidrs(ip):
@@ -36,10 +35,16 @@ def get_org(ip, cidr_to_org_dict):
 
 
 def get_ip_dict(ip, geoip2_reader, cidr_to_org_dict):
-    response = geoip2_reader.city(ip)
+    try:
+        response = geoip2_reader.city(ip)
+        country_name = response.country.name,
+        city_name = response.city.name,
+    except geoip2.errors.GeoIP2Error:
+        country_name = None
+        city_name = None
     return {
-        'country_name': response.country.name,
-        'city_name': response.city.name,
+        'country_name': country_name[0] if country_name else None,
+        'city_name': city_name[0] if city_name else None,
         'organization': get_org(ip, cidr_to_org_dict)}
 
 
@@ -100,21 +105,13 @@ def main():
     geoip2_reader = geoip2.database.Reader(sys.argv[GEOLITE_CITY_DB_PATH])
 
     print('Processing IPs...')
-    # pool = ThreadPool()
-    # pool.map(
-    #     parse_line_wrapper(
-    #         responses,
-    #         init_output,
-    #         geoip2_reader,
-    #         cidr_to_org_dict),
-    #     content)
     process_func = parse_line_wrapper(
-            responses,
-            init_output,
-            geoip2_reader,
-            cidr_to_org_dict)
+        responses,
+        init_output,
+        geoip2_reader,
+        cidr_to_org_dict)
     for line in content:
-    	process_func(line)
+        process_func(line)
 
     geoip2_reader.close()
 
